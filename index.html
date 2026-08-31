@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>용용이비구름</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☔</text></svg>">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style>
         html, body, #map {
             width: 100%;
@@ -24,7 +26,7 @@
             transform: translateX(-50%);
             z-index: 1000;
             background: rgba(0, 0, 0, 0.75);
-            color: #ffffff;
+            color: #fff;
             padding: 6px 16px;
             border-radius: 20px;
             font-size: 16px;
@@ -39,7 +41,7 @@
             top: 60px;
             left: 10px;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255,255,255,0.9);
             padding: 5px 6px;
             border-radius: 6px;
             font-size: 8px;
@@ -48,21 +50,31 @@
             align-items: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
+
         .legend-container {
             display: flex;
             flex-direction: row;
             align-items: center;
             gap: 3px;
         }
+
         .color-scale {
             width: 10px;
             height: 170px;
-            background: linear-gradient(to bottom, 
-                #ff00ff 0%, #a100ff 8%, #ff0000 20%, 
-                #ff9900 35%, #ffff00 50%, #00d600 70%, 
-                #0099ff 85%, #0000ff 100%);
+            background: linear-gradient(
+                to bottom,
+                #ff00ff 0%,
+                #a100ff 8%,
+                #ff0000 20%,
+                #ff9900 35%,
+                #ffff00 50%,
+                #00d600 70%,
+                #0099ff 85%,
+                #0000ff 100%
+            );
             border: 1px solid #777;
         }
+
         .legend-labels {
             display: flex;
             flex-direction: column;
@@ -78,7 +90,7 @@
             top: 15px;
             right: 15px;
             z-index: 1000;
-            background: #ffffff;
+            background: #fff;
             border: 1px solid #ccc;
             width: 38px;
             height: 38px;
@@ -97,7 +109,7 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255,255,255,0.95);
             padding: 8px 16px;
             border-radius: 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -107,10 +119,12 @@
             gap: 10px;
             max-width: 80%;
         }
+
         .yongyong-avatar {
             font-size: 24px;
             line-height: 1;
         }
+
         .yongyong-text {
             font-size: 13px;
             font-weight: bold;
@@ -130,226 +144,523 @@
             flex-direction: column;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
         }
+
         .slider-container {
             padding: 8px 15px 0 15px;
         }
+
         .slider {
             width: 100%;
-            accent-color: #ffffff;
+            height: 25px;
+            accent-color: #fff;
+            cursor: pointer;
+            touch-action: pan-x;
         }
+
         .controls-row {
             display: flex;
             justify-content: space-around;
             align-items: center;
             padding: 8px 0 12px 0;
         }
+
         .nav-btn {
             background: none;
             border: none;
             color: white;
             font-size: 22px;
             cursor: pointer;
-            padding: 0 10px;
+            padding: 0 20px;
+            min-width: 60px;
+            height: 40px;
+        }
+
+        .nav-btn:active {
+            transform: scale(0.9);
         }
     </style>
 </head>
+
 <body>
-    <div id="map"></div>
 
-    <div id="time-display" class="time-header">비구름 레이더 로딩 중...</div>
+<div id="map"></div>
 
-    <div class="legend-bar">
-        <div class="legend-container">
-            <div class="legend-labels">
-                <span>110</span>
-                <span>70</span>
-                <span>40</span>
-                <span>20</span>
-                <span>10</span>
-                <span>5</span>
-                <span>1</span>
-                <span>0.1</span>
-            </div>
-            <div class="color-scale"></div>
+<div id="time-display" class="time-header">
+    비구름 레이더 로딩 중...
+</div>
+
+<div class="legend-bar">
+    <div class="legend-container">
+        <div class="legend-labels">
+            <span>110</span>
+            <span>70</span>
+            <span>40</span>
+            <span>20</span>
+            <span>10</span>
+            <span>5</span>
+            <span>1</span>
+            <span>0.1</span>
         </div>
-        <div style="font-size:7px; font-weight:bold; margin-top:2px;">mm/h</div>
+        <div class="color-scale"></div>
+    </div>
+    <div style="font-size:7px;font-weight:bold;margin-top:2px;">
+        mm/h
+    </div>
+</div>
+
+<div class="location-btn" onclick="locateUser(true)">
+    🎯
+</div>
+
+<div class="yongyong-box">
+    <div class="yongyong-avatar">🐲</div>
+    <div class="yongyong-text" id="yongSpeech">
+        실시간 비구름 위치를 확인해요!
+    </div>
+</div>
+
+<div class="bottom-nav">
+
+    <div class="slider-container">
+        <input
+            type="range"
+            id="radar-slider"
+            class="slider"
+            min="0"
+            max="0"
+            step="1"
+            value="0"
+        >
     </div>
 
-    <div class="location-btn" onclick="locateUser(true)">🎯</div>
-
-    <div class="yongyong-box">
-        <div class="yongyong-avatar">🐲</div>
-        <div class="yongyong-text" id="yongSpeech">실시간 비구름 위치를 확인해요!</div>
+    <div class="controls-row">
+        <button class="nav-btn" id="prev-btn">◀</button>
+        <button class="nav-btn" id="play-btn">▶</button>
+        <button class="nav-btn" id="next-btn">▶</button>
     </div>
 
-    <div class="bottom-nav">
-        <div class="slider-container">
-            <input type="range" id="radar-slider" class="slider" min="0" max="0" value="0" oninput="changeFrame(this.value)">
-        </div>
-        <div class="controls-row">
-            <button class="nav-btn" onclick="prevFrame()">◀</button>
-            <button id="play-btn" class="nav-btn" onclick="togglePlay()">▶</button>
-            <button class="nav-btn" onclick="nextFrame()">▶</button>
-        </div>
-    </div>
+</div>
 
-    <script>
-        var map = L.map('map', {
-            center: [36.5, 127.5],
-            zoom: 7,
-            zoomControl: false
-        });
+<script>
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+var map = L.map('map', {
+    center: [36.5, 127.5],
+    zoom: 7,
+    zoomControl: false
+});
 
-        var myLocationMarker = null;
+L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+    }
+).addTo(map);
 
-        function setMarker(lat, lng) {
-            var latlng = [lat, lng];
-            if (!myLocationMarker) {
-                myLocationMarker = L.circleMarker(latlng, {
-                    radius: 8,
-                    fillColor: "#0055FF",
-                    color: "#FFFFFF",
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 1
-                }).addTo(map);
-            } else {
-                myLocationMarker.setLatLng(latlng);
+var myLocationMarker = null;
+
+function setMarker(lat, lng) {
+
+    var latlng = [lat, lng];
+
+    if (!myLocationMarker) {
+
+        myLocationMarker = L.circleMarker(
+            latlng,
+            {
+                radius: 8,
+                fillColor: "#0055FF",
+                color: "#FFFFFF",
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 1
             }
-        }
+        ).addTo(map);
 
-        function locateUser(moveMap) {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function (pos) {
-                        var lat = pos.coords.latitude;
-                        var lng = pos.coords.longitude;
-                        setMarker(lat, lng);
-                        if (moveMap) {
-                            map.setView([lat, lng], 10);
-                        }
-                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 상태예요!";
-                    },
-                    function (err) {
-                        document.getElementById('yongSpeech').innerText = "GPS 위치 권한을 확인해 주세요!";
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
+    } else {
+
+        myLocationMarker.setLatLng(latlng);
+
+    }
+}
+
+function locateUser(moveMap) {
+
+    if (!navigator.geolocation) {
+
+        document.getElementById('yongSpeech').innerText =
+            "이 기기에서는 GPS를 사용할 수 없어요.";
+
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(pos) {
+
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+
+            setMarker(lat, lng);
+
+            if (moveMap) {
+                map.setView([lat, lng], 10);
             }
+
+            document.getElementById('yongSpeech').innerText =
+                "내 위치 기준 비구름 상태예요!";
+
+        },
+
+        function() {
+
+            document.getElementById('yongSpeech').innerText =
+                "GPS 위치 권한을 확인해 주세요!";
+
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
         }
+    );
+}
 
-        locateUser(true);
+locateUser(true);
 
-        var radarLayers = [];
-        var timeLabels = [];
-        var currentIndex = 0;
-        var isPlaying = false;
-        var timer = null;
+var radarLayers = [];
+var timeLabels = [];
+var currentIndex = 0;
+var isPlaying = false;
+var timer = null;
 
-        function formatKST(timestampSec) {
-            var date = new Date(timestampSec * 1000);
-            var m = String(date.getMonth() + 1).padStart(2, '0');
-            var d = String(date.getDate()).padStart(2, '0');
-            var h = String(date.getHours()).padStart(2, '0');
-            var min = String(date.getMinutes()).padStart(2, '0');
-            return `${m}월 ${d}일 ${h}:${min}`;
+function formatKST(timestamp) {
+
+    var date = new Date(timestamp * 1000);
+
+    var kst = new Date(
+        date.getTime() + (9 * 60 * 60 * 1000)
+    );
+
+    var month = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    var day = String(kst.getUTCDate()).padStart(2, '0');
+    var hour = String(kst.getUTCHours()).padStart(2, '0');
+    var minute = String(kst.getUTCMinutes()).padStart(2, '0');
+
+    return month + "월 " +
+           day + "일 " +
+           hour + ":" +
+           minute;
+}
+
+function showFrame(index) {
+
+    if (radarLayers.length === 0) {
+        return;
+    }
+
+    index = Number(index);
+
+    if (index < 0) {
+        index = 0;
+    }
+
+    if (index >= radarLayers.length) {
+        index = radarLayers.length - 1;
+    }
+
+    currentIndex = index;
+
+    for (var i = 0; i < radarLayers.length; i++) {
+
+        if (i === index) {
+            radarLayers[i].setOpacity(0.8);
+        } else {
+            radarLayers[i].setOpacity(0);
         }
+    }
 
-        fetch('https://api.rainviewer.com/public/weather-maps.json')
-            .then(res => res.json())
-            .then(data => {
-                var past = data.radar.past || [];
-                var nowcast = data.radar.nowcast || [];
-                
-                // 과거 데이터 중 '가장 최근(현재 실시간) 1개' + 미래 예측 전체
-                var currentFrame = past.length > 0 ? [past[past.length - 1]] : [];
-                var frames = currentFrame.concat(nowcast);
+    var slider = document.getElementById('radar-slider');
 
-                frames.forEach(function(frame, idx) {
-                    var timeStr = formatKST(frame.time);
-                    var prefix = (idx === 0) ? "🔴 현재 실시간" : "🔮 비구름 예측";
+    slider.value = index;
 
-                    timeLabels.push(`${prefix}: ${timeStr}`);
+    if (timeLabels[index]) {
 
-                    var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/6/1_1.png', {
-                        opacity: 0,
-                        maxZoom: 18,
-                        maxNativeZoom: 7,
-                        tileSize: 256
-                    }).addTo(map);
+        document.getElementById('time-display').innerText =
+            timeLabels[index];
 
-                    radarLayers.push(layer);
-                });
+    }
 
-                var slider = document.getElementById('radar-slider');
-                slider.max = frames.length > 0 ? frames.length - 1 : 0;
-                
+    if (index === 0) {
+
+        document.getElementById('yongSpeech').innerText =
+            "🔴 현재 비구름을 보여드려요!";
+
+    } else {
+
+        document.getElementById('yongSpeech').innerText =
+            "🔮 앞으로 비구름이 이렇게 이동해요!";
+
+    }
+}
+
+function nextFrame() {
+
+    if (radarLayers.length === 0) {
+        return;
+    }
+
+    if (currentIndex < radarLayers.length - 1) {
+
+        currentIndex++;
+
+    } else {
+
+        currentIndex = 0;
+
+    }
+
+    showFrame(currentIndex);
+}
+
+function prevFrame() {
+
+    if (radarLayers.length === 0) {
+        return;
+    }
+
+    if (currentIndex > 0) {
+
+        currentIndex--;
+
+    } else {
+
+        currentIndex = radarLayers.length - 1;
+
+    }
+
+    showFrame(currentIndex);
+}
+
+function startPlay() {
+
+    if (radarLayers.length === 0) {
+        return;
+    }
+
+    isPlaying = true;
+
+    document.getElementById('play-btn').innerText = '❚❚';
+
+    if (timer) {
+        clearInterval(timer);
+    }
+
+    timer = setInterval(
+
+        function() {
+
+            currentIndex++;
+
+            if (currentIndex >= radarLayers.length) {
                 currentIndex = 0;
-                slider.value = 0;
-
-                showFrame(0);
-            })
-            .catch(err => {
-                document.getElementById('time-display').innerText = "레이더 데이터를 불러오지 못했습니다.";
-            });
-
-        function showFrame(index) {
-            var targetIdx = parseInt(index);
-            radarLayers.forEach(function(layer, i) {
-                layer.setOpacity(i === targetIdx ? 0.8 : 0);
-            });
-
-            if (timeLabels[targetIdx]) {
-                document.getElementById('time-display').innerText = timeLabels[targetIdx];
             }
-        }
 
-        function changeFrame(val) {
-            currentIndex = parseInt(val);
             showFrame(currentIndex);
-        }
 
-        function prevFrame() {
-            if (currentIndex > 0) {
-                currentIndex--;
-                document.getElementById('radar-slider').value = currentIndex;
-                showFrame(currentIndex);
+        },
+
+        700
+    );
+}
+
+function stopPlay() {
+
+    isPlaying = false;
+
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+
+    document.getElementById('play-btn').innerText = '▶';
+}
+
+function togglePlay() {
+
+    if (isPlaying) {
+
+        stopPlay();
+
+    } else {
+
+        startPlay();
+
+    }
+}
+
+document.getElementById('radar-slider').addEventListener(
+    'input',
+    function() {
+
+        stopPlay();
+
+        currentIndex = Number(this.value);
+
+        showFrame(currentIndex);
+
+    }
+);
+
+document.getElementById('radar-slider').addEventListener(
+    'change',
+    function() {
+
+        currentIndex = Number(this.value);
+
+        showFrame(currentIndex);
+
+    }
+);
+
+document.getElementById('prev-btn').addEventListener(
+    'click',
+    function() {
+
+        stopPlay();
+        prevFrame();
+
+    }
+);
+
+document.getElementById('next-btn').addEventListener(
+    'click',
+    function() {
+
+        stopPlay();
+        nextFrame();
+
+    }
+);
+
+document.getElementById('play-btn').addEventListener(
+    'click',
+    function() {
+
+        togglePlay();
+
+    }
+);
+
+fetch('https://api.rainviewer.com/public/weather-maps.json')
+
+.then(function(res) {
+
+    if (!res.ok) {
+        throw new Error('RainViewer API 오류');
+    }
+
+    return res.json();
+
+})
+
+.then(function(data) {
+
+    var past = data.radar && data.radar.past
+        ? data.radar.past
+        : [];
+
+    var nowcast = data.radar && data.radar.nowcast
+        ? data.radar.nowcast
+        : [];
+
+    var frames = [];
+
+    if (past.length > 0) {
+
+        frames.push(
+            past[past.length - 1]
+        );
+
+    }
+
+    for (var i = 0; i < nowcast.length; i++) {
+
+        frames.push(nowcast[i]);
+
+    }
+
+    if (frames.length === 0) {
+
+        throw new Error('레이더 프레임이 없습니다.');
+
+    }
+
+    for (var i = 0; i < frames.length; i++) {
+
+        var frame = frames[i];
+
+        var timeStr = formatKST(frame.time);
+
+        var prefix =
+            i === 0
+            ? "🔴 현재 실시간"
+            : "🔮 비구름 예측";
+
+        timeLabels.push(
+            prefix + ": " + timeStr
+        );
+
+        var tileUrl =
+            'https://tilecache.rainviewer.com' +
+            frame.path +
+            '/256/{z}/{x}/{y}/2/1_1.png';
+
+        var layer = L.tileLayer(
+            tileUrl,
+            {
+                opacity: 0,
+                maxZoom: 18,
+                maxNativeZoom: 7,
+                tileSize: 256,
+                zIndex: 10
             }
-        }
+        );
 
-        function nextFrame() {
-            if (currentIndex < radarLayers.length - 1) {
-                currentIndex++;
-                document.getElementById('radar-slider').value = currentIndex;
-                showFrame(currentIndex);
-            }
-        }
+        layer.addTo(map);
 
-        function startPlay() {
-            isPlaying = true;
-            document.getElementById('play-btn').innerText = '❚❚';
-            timer = setInterval(function() {
-                currentIndex = (currentIndex + 1) % radarLayers.length;
-                document.getElementById('radar-slider').value = currentIndex;
-                showFrame(currentIndex);
-            }, 800);
-        }
+        radarLayers.push(layer);
 
-        function togglePlay() {
-            var btn = document.getElementById('play-btn');
-            if (isPlaying) {
-                clearInterval(timer);
-                btn.innerText = '▶';
-                isPlaying = false;
-            } else {
-                startPlay();
-            }
-        }
-    </script>
+    }
+
+    var slider =
+        document.getElementById('radar-slider');
+
+    slider.min = 0;
+    slider.max = radarLayers.length - 1;
+    slider.step = 1;
+    slider.value = 0;
+
+    currentIndex = 0;
+
+    showFrame(0);
+
+})
+
+.catch(function(error) {
+
+    console.error(error);
+
+    document.getElementById('time-display').innerText =
+        "레이더 데이터를 불러오지 못했습니다.";
+
+    document.getElementById('yongSpeech').innerText =
+        "비구름 데이터를 불러오지 못했어요.";
+
+});
+
+</script>
+
 </body>
 </html>
