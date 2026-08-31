@@ -23,7 +23,7 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             color: #ffffff;
             padding: 8px 18px;
             border-radius: 20px;
@@ -142,7 +142,7 @@
 <body>
     <div id="map"></div>
 
-    <div id="time-display" class="time-header">초단기 비구름 예측 불러오는 중...</div>
+    <div id="time-display" class="time-header">레이더 데이터 불러오는 중...</div>
 
     <div class="legend-bar">
         <div class="legend-container">
@@ -164,7 +164,7 @@
 
     <div class="yongyong-box">
         <div class="yongyong-avatar">🐲</div>
-        <div class="yongyong-text" id="yongSpeech">출근 전 비구름 이동 경로를 확인하세요!</div>
+        <div class="yongyong-text" id="yongSpeech">비구름 데이터를 불러오고 있어요!</div>
     </div>
 
     <div class="bottom-nav">
@@ -182,6 +182,8 @@
         var map = L.map('map', {
             center: [36.5, 127.5],
             zoom: 7,
+            minZoom: 4,
+            maxZoom: 12,
             zoomControl: false
         });
 
@@ -213,8 +215,8 @@
                         var lat = pos.coords.latitude;
                         var lng = pos.coords.longitude;
                         setMarker(lat, lng);
-                        if (moveMap) map.setView([lat, lng], 10);
-                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 이동 예측이에요!";
+                        if (moveMap) map.setView([lat, lng], 9);
+                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 확인하기";
                     },
                     function () {
                         document.getElementById('yongSpeech').innerText = "GPS 위치를 확인해 주세요!";
@@ -232,47 +234,63 @@
         var isPlaying = false;
         var timer = null;
 
-        // 초단기 예측 레이어 생성 (현재 시점 ~ 미래 120분까지 10분 단위 예측)
-        function initForecastData() {
-            var now = new Date();
-            // 10분 단위 절사
-            now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
-
-            var totalFrames = 7; // 현재(0분) + 10분, 20분, 30분, 40분, 50분, 60분 후 예측
-
-            for (var i = 0; i < totalFrames; i++) {
-                var forecastTime = new Date(now.getTime() + (i * 10 * 60 * 1000));
+        // RainViewer API에서 유효한 타임스탬프 리스트를 직접 받아와서 레이어 생성
+        fetch('https://api.rainviewer.com/public/weather-maps.json')
+            .then(res => res.json())
+            .then(data => {
+                var frames = [];
                 
-                var month = String(forecastTime.getMonth() + 1).padStart(2, '0');
-                var date = String(forecastTime.getDate()).padStart(2, '0');
-                var hours = String(forecastTime.getHours()).padStart(2, '0');
-                var mins = String(forecastTime.getMinutes()).padStart(2, '0');
-
-                var labelText = "";
-                if (i === 0) {
-                    labelText = `🔴 현재 실시간 (${hours}:${mins})`;
-                } else {
-                    labelText = `🔮 ${i * 10}분 후 예측 (${hours}:${mins})`;
+                // past(과거 마지막 1개 - 현재 시점) + nowcast(미래 예측 전체)
+                if (data.radar && data.radar.past && data.radar.past.length > 0) {
+                    var nowFrame = data.radar.past[data.radar.past.length - 1];
+                    nowFrame.isNow = true;
+                    frames.push(nowFrame);
                 }
-                timeLabels.push(labelText);
 
-                // RainViewer 타일 소스 연동 방식 고정 및 폴백 레이어 설정
-                var layer = L.tileLayer('https://tilecache.rainviewer.com/v2/radar/' + Math.floor(forecastTime.getTime()/1000) + '/256/{z}/{x}/{y}/6/1_1.png', {
-                    opacity: 0,
-                    maxZoom: 18,
-                    tileSize: 256
-                }).addTo(map);
+                if (data.radar && data.radar.nowcast && data.radar.nowcast.length > 0) {
+                    data.radar.nowcast.forEach(f => frames.push(f));
+                }
 
-                radarLayers.push(layer);
-            }
+                if (frames.length === 0) {
+                    document.getElementById('time-display').innerText = "비구름 데이터 없음";
+                    return;
+                }
 
-            var slider = document.getElementById('radar-slider');
-            slider.max = totalFrames - 1;
-            slider.value = 0;
-            showFrame(0);
-        }
+                frames.forEach(function(frame, idx) {
+                    var dateObj = new Date(frame.time * 1000);
+                    var hours = String(dateObj.getHours()).padStart(2, '0');
+                    var mins = String(dateObj.getMinutes()).padStart(2, '0');
 
-        initForecastData();
+                    var labelText = "";
+                    if (frame.isNow || idx === 0) {
+                        labelText = `🔴 현재 실시간 (${hours}:${mins})`;
+                    } else {
+                        labelText = `🔮 미래 예측 (${hours}:${mins})`;
+                    }
+                    timeLabels.push(labelText);
+
+                    // 오류를 발생시키는 옵션을 제거한 안정적인 타일 URL
+                    var tileUrl = data.host + frame.path + '/256/{z}/{x}/{y}/1/0_0.png';
+
+                    var layer = L.tileLayer(tileUrl, {
+                        opacity: 0,
+                        maxZoom: 12,
+                        tileSize: 256
+                    }).addTo(map);
+
+                    radarLayers.push(layer);
+                });
+
+                var slider = document.getElementById('radar-slider');
+                slider.max = frames.length - 1;
+                slider.value = 0;
+                showFrame(0);
+                document.getElementById('yongSpeech').innerText = "비구름 이동 경로 준비 완료!";
+            })
+            .catch(err => {
+                document.getElementById('time-display').innerText = "데이터 로딩 실패";
+                console.error(err);
+            });
 
         function showFrame(index) {
             var targetIdx = parseInt(index);
