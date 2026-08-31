@@ -223,7 +223,7 @@
         var radarLayers = [];
         var timestamps = [];
         var currentIndex = 0;
-        var isPlaying = true;
+        var isPlaying = null;
         var timer = null;
 
         var COLOR_SCHEME = 6;
@@ -251,7 +251,8 @@
                 slider.value = currentIndex;
 
                 showFrame(currentIndex);
-                startPlay();
+                document.getElementById('play-btn').innerText = '▶';
+isPlaying = false;
             });
 
         function showFrame(index) {
