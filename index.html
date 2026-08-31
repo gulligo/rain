@@ -257,9 +257,11 @@
                 var past = data.radar.past || [];
                 var nowcast = data.radar.nowcast || [];
                 
-                // 과거 맨 마지막 1개(현재) + 미래 예측 전체만 가져옵니다.
-                var currentFrame = past.length > 0 ? [past[past.length - 1]] : [];
-                var frames = currentFrame.concat(nowcast);
+                // 과거 데이터 + 미래 예측 데이터 합치기
+                var frames = past.concat(nowcast);
+                
+                // 과거의 마지막 프레임이 바로 '현재 실시간' 기준점이 됩니다.
+                var nowIndex = past.length > 0 ? past.length - 1 : 0;
 
                 frames.forEach(function(frame, idx) {
                     var kstTimestamp = (frame.time + (9 * 3600)) * 1000;
@@ -270,8 +272,14 @@
                     var hours = String(date.getUTCHours()).padStart(2, '0');
                     var minutes = String(date.getUTCMinutes()).padStart(2, '0');
                     
-                    // index 0번이 바로 '현재 실시간'입니다.
-                    var prefix = (idx === 0) ? "🔴 현재 실시간" : "🔮 비구름 예측";
+                    var prefix = "";
+                    if (idx < nowIndex) {
+                        prefix = "◀ 과거 비구름";
+                    } else if (idx === nowIndex) {
+                        prefix = "🔴 현재 실시간";
+                    } else {
+                        prefix = "🔮 비구름 예측";
+                    }
 
                     timeLabels.push(`${prefix}: ${month}월 ${day}일 ${hours}:${minutes}`);
 
@@ -288,23 +296,24 @@
                 var slider = document.getElementById('radar-slider');
                 slider.max = frames.length - 1;
                 
-                // 슬라이더 단추를 맨 왼쪽(0번 index = 현재)으로 고정합니다.
-                currentIndex = 0;
-                slider.value = 0;
+                // 접속 시 '현재 실시간' 프레임으로 바로 지정
+                currentIndex = nowIndex;
+                slider.value = nowIndex;
 
-                showFrame(0);
+                showFrame(nowIndex);
             })
             .catch(err => {
                 document.getElementById('time-display').innerText = "레이더 데이터를 불러오지 못했습니다.";
             });
 
         function showFrame(index) {
+            var targetIdx = parseInt(index);
             radarLayers.forEach(function(layer, i) {
-                layer.setOpacity(i === parseInt(index) ? 0.8 : 0);
+                layer.setOpacity(i === targetIdx ? 0.8 : 0);
             });
 
-            if (timeLabels[index]) {
-                document.getElementById('time-display').innerText = timeLabels[index];
+            if (timeLabels[targetIdx]) {
+                document.getElementById('time-display').innerText = timeLabels[targetIdx];
             }
         }
 
