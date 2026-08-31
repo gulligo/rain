@@ -55,19 +55,18 @@
             gap: 4px;
         }
         .color-scale {
-            width: 10px;
-            height: 160px;
+            width: 12px;
+            height: 170px;
             background: linear-gradient(to bottom, 
-                #ff00ff 0%, #a100ff 10%, #ff0000 25%, 
-                #ff9900 40%, #ffff00 60%, #00d600 80%, 
-                #0099ff 100%);
+                #ff00ff 0%, #ff0000 15%, #ff9900 30%, 
+                #ffff00 45%, #00e600 65%, #00a896 85%, #0055ff 100%);
             border: 1px solid #777;
         }
         .legend-labels {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 160px;
+            height: 170px;
             font-size: 8px;
             color: #333;
         }
@@ -147,13 +146,14 @@
     <div class="legend-bar">
         <div class="legend-container">
             <div class="legend-labels">
-                <span>100</span>
+                <span>110</span>
                 <span>70</span>
                 <span>40</span>
                 <span>20</span>
                 <span>10</span>
                 <span>5</span>
                 <span>1</span>
+                <span>0.1</span>
             </div>
             <div class="color-scale"></div>
         </div>
@@ -270,8 +270,8 @@
                     }
                     timeLabels.push(labelText);
 
-                    // 핵심 수정: /2/ 옵션을 주어 선명한 레인보우 팔레트 적용, /1_1.png 로 부드러운 필터링 적용
-                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/2/1_1.png';
+                    // 팔레트 1번(Original Color)을 사용하여 첨부 사진처럼 선명한 색상 표출
+                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/1_1.png';
 
                     var layer = L.tileLayer(tileUrl, {
                         opacity: 0,
@@ -295,7 +295,6 @@
         function showFrame(index) {
             var targetIdx = parseInt(index);
             radarLayers.forEach(function(layer, i) {
-                // 선명도를 위해 투명도를 0.95로 올려 뚜렷하게 표출
                 layer.setOpacity(i === targetIdx ? 0.95 : 0);
             });
 
