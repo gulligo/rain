@@ -275,11 +275,11 @@
                     }
                     timeLabels.push(labelText);
 
-                    // 회색 영역을 제거하기 위해 0_0.png (smooth=0, snow=0) 옵션 적용
-                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/0_0.png';
+                    // 회색 영역이 없는 팔레트(2번) 적용
+                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/2/0_0.png';
 
                     var layer = L.tileLayer(tileUrl, {
-                        opacity: 0.9,
+                        opacity: 0.85,
                         maxZoom: 12,
                         tileSize: 256
                     }).addTo(map);
@@ -300,7 +300,7 @@
         function showFrame(index) {
             var targetIdx = parseInt(index);
             radarLayers.forEach(function(layer, i) {
-                layer.setOpacity(i === targetIdx ? 0.9 : 0);
+                layer.setOpacity(i === targetIdx ? 0.85 : 0);
             });
 
             if (timeLabels[targetIdx]) {
