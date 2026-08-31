@@ -54,12 +54,18 @@
             align-items: center;
             gap: 4px;
         }
+        /* RainViewer 1번 팔레트와 1:1로 일치시킨 막대 그래디언트 */
         .color-scale {
             width: 12px;
             height: 170px;
             background: linear-gradient(to bottom, 
-                #ff00ff 0%, #ff0000 15%, #ff9900 30%, 
-                #ffff00 45%, #00e600 65%, #00a896 85%, #0055ff 100%);
+                #ff00db 0%, 
+                #e60000 15%, 
+                #ffa500 35%, 
+                #ffff00 50%, 
+                #00cd00 65%, 
+                #0080ff 85%, 
+                #0200db 100%);
             border: 1px solid #777;
         }
         .legend-labels {
@@ -270,7 +276,6 @@
                     }
                     timeLabels.push(labelText);
 
-                    // 팔레트 1번(Original Color)을 사용하여 첨부 사진처럼 선명한 색상 표출
                     var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/1_1.png';
 
                     var layer = L.tileLayer(tileUrl, {
