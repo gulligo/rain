@@ -234,21 +234,17 @@
         var isPlaying = false;
         var timer = null;
 
-        // LibreWXR 오픈 인스턴스 API 연동 (API 키 불필요, nowcast 최대 60분 지원)
         fetch('https://api.librewxr.net/public/weather-maps.json')
             .then(res => res.json())
             .then(data => {
                 var frames = [];
-                var nowIdx = 0;
 
-                // 과거 데이터 마지막 프레임 (현재 실시간)
                 if (data.radar && data.radar.past && data.radar.past.length > 0) {
                     var nowFrame = data.radar.past[data.radar.past.length - 1];
                     nowFrame.isNow = true;
                     frames.push(nowFrame);
                 }
 
-                // LibreWXR 제공 미래 예측 (nowcast - 최대 60분, 6프레임)
                 if (data.radar && data.radar.nowcast && data.radar.nowcast.length > 0) {
                     data.radar.nowcast.forEach(f => frames.push(f));
                 }
@@ -274,8 +270,8 @@
                     }
                     timeLabels.push(labelText);
 
-                    // LibreWXR 드롭인 타일 주소 규격
-                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/0_0.png';
+                    // 핵심 수정: /2/ 옵션을 주어 선명한 레인보우 팔레트 적용, /1_1.png 로 부드러운 필터링 적용
+                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/2/1_1.png';
 
                     var layer = L.tileLayer(tileUrl, {
                         opacity: 0,
@@ -299,7 +295,8 @@
         function showFrame(index) {
             var targetIdx = parseInt(index);
             radarLayers.forEach(function(layer, i) {
-                layer.setOpacity(i === targetIdx ? 0.85 : 0);
+                // 선명도를 위해 투명도를 0.95로 올려 뚜렷하게 표출
+                layer.setOpacity(i === targetIdx ? 0.95 : 0);
             });
 
             if (timeLabels[targetIdx]) {
