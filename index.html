@@ -156,7 +156,7 @@
 <body>
     <div id="map"></div>
 
-    <div id="time-display" class="time-header">🇰🇷 기상청 정밀 레이더 로딩 중...</div>
+    <div id="time-display" class="time-header">비구름 레이더 로딩 중...</div>
 
     <div class="legend-bar">
         <div class="legend-container">
@@ -179,7 +179,7 @@
 
     <div class="yongyong-box">
         <div class="yongyong-avatar">🐲</div>
-        <div class="yongyong-text" id="yongSpeech">대한민국 기상청 정밀 데이터로 확인해요!</div>
+        <div class="yongyong-text" id="yongSpeech">실시간 비구름 위치를 확인해요!</div>
     </div>
 
     <div class="bottom-nav">
@@ -194,9 +194,6 @@
     </div>
 
     <script>
-        const AUTH_KEY = "kr6UFVhDSVy-lBVYQ8lcoQ";
-
-        // 대한민국 중심부 세팅
         var map = L.map('map', {
             center: [36.5, 127.5],
             zoom: 7,
@@ -205,7 +202,7 @@
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
-            attribution: '© 대한민국 기상청 / OpenStreetMap'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
         var myLocationMarker = null;
@@ -236,16 +233,12 @@
                         if (moveMap) {
                             map.setView([lat, lng], 10);
                         }
-                        document.getElementById('yongSpeech').innerText = "내 위치 기준 초정밀 비구름이에요!";
+                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 상태예요!";
                     },
                     function (err) {
-                        document.getElementById('yongSpeech').innerText = "GPS 위치 수신을 확인해 주세요!";
+                        document.getElementById('yongSpeech').innerText = "GPS 위치 권한을 확인해 주세요!";
                     },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    }
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             }
         }
@@ -258,58 +251,46 @@
         var isPlaying = false;
         var timer = null;
 
-        // 대한민국 기상청 레이더 지도 범위 (지리좌표 영역)
-        const bounds = [[32.0, 123.5], [39.5, 131.5]];
+        // 안정적인 레이더 타일 API 로드
+        fetch('https://api.rainviewer.com/public/weather-maps.json')
+            .then(res => res.json())
+            .then(data => {
+                var past = data.radar.past || [];
+                var nowcast = data.radar.nowcast || [];
+                var frames = past.concat(nowcast);
 
-        function buildTimeFrames() {
-            var frames = [];
-            var now = new Date();
-            
-            // 최근 1시간 동안의 10분 간격 레이더 프레임 생성 (총 6개)
-            for (var i = 5; i >= 0; i--) {
-                var t = new Date(now.getTime() - (i * 10 * 60 * 1000));
-                
-                var year = t.getFullYear();
-                var month = String(t.getMonth() + 1).padStart(2, '0');
-                var day = String(t.getDate()).padStart(2, '0');
-                var hours = String(t.getHours()).padStart(2, '0');
-                var tensMinutes = Math.floor(t.getMinutes() / 10) * 10;
-                var minutes = String(tensMinutes).padStart(2, '0');
+                frames.forEach(function(frame) {
+                    var date = new Date(frame.time * 1000);
+                    var month = String(date.getMonth() + 1).padStart(2, '0');
+                    var day = String(date.getDate()).padStart(2, '0');
+                    var hours = String(date.getHours()).padStart(2, '0');
+                    var minutes = String(date.getMinutes()).padStart(2, '0');
+                    
+                    timeLabels.push(`☔ 비구름 레이더: ${month}월 ${day}일 ${hours}:${minutes}`);
 
-                var timeStr = `${year}${month}${day}${hours}${minutes}`;
-                var labelStr = `🇰🇷 기상청 레이더: ${month}월 ${day}일 ${hours}시 ${minutes}분`;
-                var imgUrl = `https://apihub.kma.go.kr/api/typ01/url/rad_hsr_img.php?tm=${timeStr}&authKey=${AUTH_KEY}`;
+                    var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/6/1_1.png', {
+                        opacity: 0,
+                        maxZoom: 18,
+                        tileSize: 256
+                    }).addTo(map);
 
-                frames.push({ url: imgUrl, label: labelStr });
-            }
-            return frames;
-        }
+                    radarLayers.push(layer);
+                });
 
-        function initKmaRadar() {
-            var frames = buildTimeFrames();
+                var slider = document.getElementById('radar-slider');
+                slider.max = frames.length - 1;
+                currentIndex = past.length > 0 ? past.length - 1 : 0;
+                slider.value = currentIndex;
 
-            frames.forEach(function(frame) {
-                timeLabels.push(frame.label);
-                
-                var layer = L.imageOverlay(frame.url, bounds, {
-                    opacity: 0,
-                    interactive: false
-                }).addTo(map);
-
-                radarLayers.push(layer);
+                showFrame(currentIndex);
+            })
+            .catch(err => {
+                document.getElementById('time-display').innerText = "레이더 데이터를 불러오지 못했습니다.";
             });
-
-            var slider = document.getElementById('radar-slider');
-            slider.max = frames.length - 1;
-            currentIndex = frames.length - 1;
-            slider.value = currentIndex;
-
-            showFrame(currentIndex);
-        }
 
         function showFrame(index) {
             radarLayers.forEach(function(layer, i) {
-                layer.setOpacity(i === parseInt(index) ? 0.75 : 0);
+                layer.setOpacity(i === parseInt(index) ? 0.8 : 0);
             });
 
             if (timeLabels[index]) {
@@ -358,8 +339,6 @@
                 startPlay();
             }
         }
-
-        initKmaRadar();
     </script>
 </body>
 </html>
