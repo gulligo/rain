@@ -233,6 +233,43 @@
 
         locateUser(true);
 
+        // 이미지 타일에서 회색 픽셀만 자동으로 지워주는 커스텀 타일 레이어
+        L.TileLayer.FilterGray = L.TileLayer.extend({
+            createTile: function (coords, done) {
+                var tile = document.createElement('canvas');
+                tile.width = 256;
+                tile.height = 256;
+                var ctx = tile.getContext('2d');
+
+                var img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0);
+                    var imgData = ctx.getImageData(0, 0, 256, 256);
+                    var data = imgData.data;
+
+                    // 픽셀별 탐색 후 회색(무강수 레이어) 제거
+                    for (var i = 0; i < data.length; i += 4) {
+                        var r = data[i];
+                        var g = data[i + 1];
+                        var b = data[i + 2];
+
+                        // R, G, B 값이 비슷하여 회색을 띠는 픽셀 추출
+                        if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && Math.abs(r - b) < 15 && r > 100 && r < 240) {
+                            data[i + 3] = 0; // 투명하게 변경
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    done(null, tile);
+                };
+                img.onerror = function () {
+                    done(new Error('타일 로딩 실패'), tile);
+                };
+                img.src = this.getTileUrl(coords);
+                return tile;
+            }
+        });
+
         var radarLayers = [];
         var timeLabels = [];
         var currentIndex = 0;
@@ -275,13 +312,12 @@
                     }
                     timeLabels.push(labelText);
 
-                    // 회색 영역이 없는 팔레트(2번) 적용
-                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/2/0_0.png';
+                    // 부드러운 이미지(1_1.png)를 불러온 뒤 회색만 필터링하여 지움
+                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/1_1.png';
 
-                    var layer = L.tileLayer(tileUrl, {
+                    var layer = new L.TileLayer.FilterGray(tileUrl, {
                         opacity: 0.85,
-                        maxZoom: 12,
-                        tileSize: 256
+                        maxZoom: 12
                     }).addTo(map);
 
                     radarLayers.push(layer);
