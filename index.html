@@ -142,7 +142,7 @@
 <body>
     <div id="map"></div>
 
-    <div id="time-display" class="time-header">레이더 데이터 불러오는 중...</div>
+    <div id="time-display" class="time-header">레이더 데이터 로딩 중...</div>
 
     <div class="legend-bar">
         <div class="legend-container">
@@ -216,7 +216,7 @@
                         var lng = pos.coords.longitude;
                         setMarker(lat, lng);
                         if (moveMap) map.setView([lat, lng], 9);
-                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 확인하기";
+                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 이동 예측이에요!";
                     },
                     function () {
                         document.getElementById('yongSpeech').innerText = "GPS 위치를 확인해 주세요!";
@@ -234,27 +234,31 @@
         var isPlaying = false;
         var timer = null;
 
-        // RainViewer API에서 유효한 타임스탬프 리스트를 직접 받아와서 레이어 생성
-        fetch('https://api.rainviewer.com/public/weather-maps.json')
+        // LibreWXR 오픈 인스턴스 API 연동 (API 키 불필요, nowcast 최대 60분 지원)
+        fetch('https://api.librewxr.net/public/weather-maps.json')
             .then(res => res.json())
             .then(data => {
                 var frames = [];
-                
-                // past(과거 마지막 1개 - 현재 시점) + nowcast(미래 예측 전체)
+                var nowIdx = 0;
+
+                // 과거 데이터 마지막 프레임 (현재 실시간)
                 if (data.radar && data.radar.past && data.radar.past.length > 0) {
                     var nowFrame = data.radar.past[data.radar.past.length - 1];
                     nowFrame.isNow = true;
                     frames.push(nowFrame);
                 }
 
+                // LibreWXR 제공 미래 예측 (nowcast - 최대 60분, 6프레임)
                 if (data.radar && data.radar.nowcast && data.radar.nowcast.length > 0) {
                     data.radar.nowcast.forEach(f => frames.push(f));
                 }
 
                 if (frames.length === 0) {
-                    document.getElementById('time-display').innerText = "비구름 데이터 없음";
+                    document.getElementById('time-display').innerText = "데이터 없음";
                     return;
                 }
+
+                var apiHost = data.host || 'https://api.librewxr.net';
 
                 frames.forEach(function(frame, idx) {
                     var dateObj = new Date(frame.time * 1000);
@@ -265,12 +269,13 @@
                     if (frame.isNow || idx === 0) {
                         labelText = `🔴 현재 실시간 (${hours}:${mins})`;
                     } else {
-                        labelText = `🔮 미래 예측 (${hours}:${mins})`;
+                        var diffMin = idx * 10;
+                        labelText = `🔮 +${diffMin}분 예측 (${hours}:${mins})`;
                     }
                     timeLabels.push(labelText);
 
-                    // 오류를 발생시키는 옵션을 제거한 안정적인 타일 URL
-                    var tileUrl = data.host + frame.path + '/256/{z}/{x}/{y}/1/0_0.png';
+                    // LibreWXR 드롭인 타일 주소 규격
+                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/0_0.png';
 
                     var layer = L.tileLayer(tileUrl, {
                         opacity: 0,
@@ -285,10 +290,9 @@
                 slider.max = frames.length - 1;
                 slider.value = 0;
                 showFrame(0);
-                document.getElementById('yongSpeech').innerText = "비구름 이동 경로 준비 완료!";
             })
             .catch(err => {
-                document.getElementById('time-display').innerText = "데이터 로딩 실패";
+                document.getElementById('time-display').innerText = "LibreWXR 데이터 로딩 실패";
                 console.error(err);
             });
 
@@ -300,6 +304,13 @@
 
             if (timeLabels[targetIdx]) {
                 document.getElementById('time-display').innerText = timeLabels[targetIdx];
+                
+                var speech = document.getElementById('yongSpeech');
+                if (targetIdx === 0) {
+                    speech.innerText = "현재 실시간 비구름 상태입니다!";
+                } else {
+                    speech.innerText = `${targetIdx * 10}분 후 비구름 예측 경로예요!`;
+                }
             }
         }
 
