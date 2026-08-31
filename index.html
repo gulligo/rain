@@ -1,162 +1,318 @@
- html>
-<html lang="ko">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>용용이 비구름</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    html, body, #map {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      background-color: #e8f4f8;
-      font-family: sans-serif;
-    }
-    .time-header {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 10px 18px;
-      border-radius: 25px;
-      font-size: 16px;
-      font-weight: bold;
-      color: #2c3e50;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-      border: 2px solid #3498db;
-      text-align: center;
-      white-space: nowrap;
-    }
-    .gps-btn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      z-index: 1000;
-      background: #ffffff;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-      cursor: pointer;
-      border: 2px solid #3498db;
-      font-size: 20px;
-    }
-    .yongyong-box {
-      position: absolute;
-      bottom: 25px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 12px 20px;
-      border-radius: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      border: 2px solid #2ecc71;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      max-width: 85%;
-    }
-    .yongyong-avatar {
-      font-size: 32px;
-      line-height: 1;
-    }
-    .yongyong-text {
-      font-size: 14px;
-      font-weight: bold;
-      color: #2c3e50;
-    }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>날씨 레이더</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #aadaff;
+            font-family: sans-serif;
+        }
+
+        .time-header {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.65);
+            color: #ffffff;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 17px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        .legend-bar {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 6px;
+            border-radius: 4px;
+            font-size: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .legend-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 3px;
+        }
+        .color-scale {
+            width: 10px;
+            height: 170px;
+            background: linear-gradient(to bottom, 
+                #ff00ff 0%, #a100ff 8%, #ff0000 20%, 
+                #ff9900 35%, #ffff00 50%, #00d600 70%, 
+                #0099ff 85%, #0000ff 100%);
+            border: 1px solid #777;
+        }
+        .legend-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 170px;
+            font-size: 8px;
+            color: #333;
+            line-height: 1;
+        }
+
+        .location-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: #ffffff;
+            border: 1px solid #ccc;
+            width: 38px;
+            height: 38px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 20px;
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background: #00897b;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        }
+        .slider-container {
+            padding: 8px 15px 0 15px;
+        }
+        .slider {
+            width: 100%;
+            accent-color: #ffffff;
+        }
+        .controls-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0 12px 0;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+    </style>
 </head>
 <body>
+    <div id="map"></div>
 
-  <div class="time-header" id="timeHeader">🐉 용용이 비구름 감지 중...</div>
-  <div class="gps-btn" id="gpsBtn">🎯</div>
-  <div id="map"></div>
+    <div id="time-display" class="time-header">로딩 중...</div>
 
-  <div class="yongyong-box">
-    <div class="yongyong-avatar">🐲</div>
-    <div class="yongyong-text" id="yongSpeech">용용이가 현재 위치의 비구름을 살펴보고 있어요!</div>
-  </div>
+    <div class="legend-bar">
+        <div class="legend-container">
+            <div class="legend-labels">
+                <span>110</span>
+                <span>70</span>
+                <span>40</span>
+                <span>20</span>
+                <span>10</span>
+                <span>5</span>
+                <span>1</span>
+                <span>0.1</span>
+            </div>
+            <div class="color-scale"></div>
+        </div>
+        <div style="font-size:7px; font-weight:bold; margin-top:2px;">mm/h</div>
+    </div>
 
-  <script>
-    const map = L.map('map', {
-      zoomControl: false
-    }).setView([36.5, 127.5], 7);
+    <div class="location-btn" onclick="locateUser(true)">🎯</div>
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+    <div class="bottom-nav">
+        <div class="slider-container">
+            <input type="range" id="radar-slider" class="slider" min="0" max="0" value="0" oninput="changeFrame(this.value)">
+        </div>
+        <div class="controls-row">
+            <button class="nav-btn" onclick="prevFrame()">◀</button>
+            <button id="play-btn" class="nav-btn" onclick="togglePlay()">❚❚</button>
+            <button class="nav-btn" onclick="nextFrame()">▶</button>
+        </div>
+    </div>
 
-    let radarLayer = null;
-    let userMarker = null;
-
-    async function loadRadar() {
-      try {
-        const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-        const data = await response.json();
-        
-        if (data.radar && data.radar.past && data.radar.past.length > 0) {
-          const lastFrame = data.radar.past[data.radar.past.length - 1];
-          const time = new Date(lastFrame.time * 1000);
-          
-          const month = String(time.getMonth() + 1).padStart(2, '0');
-          const day = String(time.getDate()).padStart(2, '0');
-          const hours = String(time.getHours()).padStart(2, '0');
-          const minutes = String(time.getMinutes()).padStart(2, '0');
-          
-          document.getElementById('timeHeader').innerText = `🐉 레이더: ${month}월 ${day}일 ${hours}시 ${minutes}분`;
-
-          if (radarLayer) map.removeLayer(radarLayer);
-
-          radarLayer = L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${lastFrame.time}/256/{z}/{x}/{y}/2/1_1.png`, {
-            opacity: 0.6,
-            zIndex: 500
-          }).addTo(map);
-        }
-      } catch (e) {
-        document.getElementById('timeHeader').innerText = '🐉 레이더 정보를 가져오지 못했어요';
-      }
-    }
-
-    function locateUser() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          map.setView([lat, lng], 10);
-          
-          if (userMarker) map.removeLayer(userMarker);
-          
-          const customIcon = L.divIcon({
-            html: '<div style="font-size:30px; transform:translate(-50%, -50%);">🐲</div>',
-            className: '',
-            iconSize: [30, 30]
-          });
-          
-          userMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
-          document.getElementById('yongSpeech').innerText = "용용이가 찾아낸 현재 위치예요! 비구름 위치를 확인해보세요 🌧️";
-        }, () => {
-          document.getElementById('yongSpeech').innerText = "위치 권한을 켜주셔야 용용이가 내 위치를 찾을 수 있어요!";
+    <script>
+        // 기본 초기 위치 (대한민국 중심부)
+        var map = L.map('map', {
+            center: [36.5, 127.5],
+            zoom: 7,
+            zoomControl: false
         });
-      }
-    }
 
-    document.getElementById('gpsBtn').addEventListener('click', locateUser);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
 
-    loadRadar();
-    locateUser();
-    setInterval(loadRadar, 300000);
-  </script>
+        var myLocationMarker = null;
+
+        function setMarker(lat, lng) {
+            var latlng = [lat, lng];
+            if (!myLocationMarker) {
+                myLocationMarker = L.circleMarker(latlng, {
+                    radius: 8,
+                    fillColor: "#0055FF",
+                    color: "#FFFFFF",
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).addTo(map);
+            } else {
+                myLocationMarker.setLatLng(latlng);
+            }
+        }
+
+        // 깃허브 웹서버 환경용 실시간 GPS 추적 함수
+        function locateUser(moveMap) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        var lat = pos.coords.latitude;
+                        var lng = pos.coords.longitude;
+                        setMarker(lat, lng);
+                        if (moveMap) {
+                            map.setView([lat, lng], 13);
+                        }
+                    },
+                    function (err) {
+                        alert("GPS 위치 수신을 실패했습니다. 스마트폰 위치 설정이나 브라우저 권한을 확인해 주세요.");
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                alert("이 브라우저는 위치 서비스를 지원하지 않습니다.");
+            }
+        }
+
+        // 페이지 열릴 때 내 GPS 위치 찾기 실행
+        locateUser(true);
+
+        var radarLayers = [];
+        var timestamps = [];
+        var currentIndex = 0;
+        var isPlaying = true;
+        var timer = null;
+
+        var COLOR_SCHEME = 6;
+
+        fetch('https://api.rainviewer.com/public/weather-maps.json')
+            .then(res => res.json())
+            .then(data => {
+                var past = data.radar.past || [];
+                var nowcast = data.radar.nowcast || [];
+                var frames = past.concat(nowcast);
+
+                frames.forEach((frame) => {
+                    timestamps.push(frame.time);
+                    var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/' + COLOR_SCHEME + '/1_1.png', {
+                        opacity: 0,
+                        maxZoom: 18,
+                        maxNativeZoom: 7
+                    }).addTo(map);
+                    radarLayers.push(layer);
+                });
+
+                var slider = document.getElementById('radar-slider');
+                slider.max = frames.length - 1;
+                currentIndex = past.length - 1;
+                slider.value = currentIndex;
+
+                showFrame(currentIndex);
+                startPlay();
+            });
+
+        function showFrame(index) {
+            radarLayers.forEach((layer, i) => {
+                layer.setOpacity(i === parseInt(index) ? 0.8 : 0);
+            });
+
+            if (timestamps[index]) {
+                var date = new Date(timestamps[index] * 1000);
+                var days = ['일', '월', '화', '수', '목', '금', '토'];
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                var dayName = days[date.getDay()];
+                var hours = String(date.getHours()).padStart(2, '0');
+                var minutes = String(date.getMinutes()).padStart(2, '0');
+
+                document.getElementById('time-display').innerText =
+                    month + '월 ' + day + '일 (' + dayName + ') ' + hours + '시 ' + minutes + '분';
+            }
+        }
+
+        function changeFrame(val) {
+            currentIndex = parseInt(val);
+            showFrame(currentIndex);
+        }
+
+        function prevFrame() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                document.getElementById('radar-slider').value = currentIndex;
+                showFrame(currentIndex);
+            }
+        }
+
+        function nextFrame() {
+            if (currentIndex < radarLayers.length - 1) {
+                currentIndex++;
+                document.getElementById('radar-slider').value = currentIndex;
+                showFrame(currentIndex);
+            }
+        }
+
+        function startPlay() {
+            isPlaying = true;
+            document.getElementById('play-btn').innerText = '❚❚';
+            timer = setInterval(() => {
+                currentIndex = (currentIndex + 1) % radarLayers.length;
+                document.getElementById('radar-slider').value = currentIndex;
+                showFrame(currentIndex);
+            }, 600);
+        }
+
+        function togglePlay() {
+            var btn = document.getElementById('play-btn');
+            if (isPlaying) {
+                clearInterval(timer);
+                btn.innerText = '▶';
+                isPlaying = false;
+            } else {
+                startPlay();
+            }
+        }
+    </script>
 </body>
 </html>
