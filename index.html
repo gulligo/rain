@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>용용이비구름 - 기상청 정밀</title>
+    <title>용용이비구름</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☔</text></svg>">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -251,7 +251,6 @@
         var isPlaying = false;
         var timer = null;
 
-        // 안정적인 레이더 타일 API 로드
         fetch('https://api.rainviewer.com/public/weather-maps.json')
             .then(res => res.json())
             .then(data => {
@@ -259,18 +258,22 @@
                 var nowcast = data.radar.nowcast || [];
                 var frames = past.concat(nowcast);
 
-                frames.forEach(function(frame) {
+                frames.forEach(function(frame, idx) {
                     var date = new Date(frame.time * 1000);
                     var month = String(date.getMonth() + 1).padStart(2, '0');
                     var day = String(date.getDate()).padStart(2, '0');
                     var hours = String(date.getHours()).padStart(2, '0');
                     var minutes = String(date.getMinutes()).padStart(2, '0');
                     
-                    timeLabels.push(`☔ 비구름 레이더: ${month}월 ${day}일 ${hours}:${minutes}`);
+                    var isFuture = idx >= past.length;
+                    var prefix = isFuture ? "🔮 비구름 예측" : "☔ 비구름 레이더";
+                    
+                    timeLabels.push(`${prefix}: ${month}월 ${day}일 ${hours}:${minutes}`);
 
                     var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/6/1_1.png', {
                         opacity: 0,
                         maxZoom: 18,
+                        maxNativeZoom: 7,
                         tileSize: 256
                     }).addTo(map);
 
@@ -279,6 +282,8 @@
 
                 var slider = document.getElementById('radar-slider');
                 slider.max = frames.length - 1;
+                
+                // 과거 데이터가 끝나는 시점(현재 시간)부터 시작하도록 설정
                 currentIndex = past.length > 0 ? past.length - 1 : 0;
                 slider.value = currentIndex;
 
