@@ -251,29 +251,55 @@
         var isPlaying = false;
         var timer = null;
 
+        function formatKST(timestampSec) {
+            var date = new Date(timestampSec * 1000);
+            var formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Seoul',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            var parts = formatter.formatToParts(date);
+            var map = {};
+            parts.forEach(p => map[p.type] = p.value);
+            return `${map.month}월 ${map.day}일 ${map.hour}:${map.minute}`;
+        }
+
         fetch('https://api.rainviewer.com/public/weather-maps.json')
             .then(res => res.json())
             .then(data => {
                 var past = data.radar.past || [];
                 var nowcast = data.radar.nowcast || [];
                 
-                // 과거 데이터 중 '가장 최근(현재) 1개'만 가져오고, 나머지는 미래 예측 데이터를 붙입니다.
-                var currentFrame = past.length > 0 ? [past[past.length - 1]] : [];
-                var frames = currentFrame.concat(nowcast);
+                var frames = [];
+                var nowIndex = 0;
+
+                // 예측 데이터가 유효하면 과거 1개 + 미래 예측 전체 사용
+                if (nowcast.length > 0) {
+                    var currentFrame = past.length > 0 ? [past[past.length - 1]] : [];
+                    frames = currentFrame.concat(nowcast);
+                    nowIndex = 0;
+                } else {
+                    // 예측 데이터가 비어있을 때는 과거 데이터 전체 활용
+                    frames = past;
+                    nowIndex = past.length > 0 ? past.length - 1 : 0;
+                }
 
                 frames.forEach(function(frame, idx) {
-                    var kstTimestamp = (frame.time + (9 * 3600)) * 1000;
-                    var date = new Date(kstTimestamp);
-                    
-                    var month = String(date.getUTCMonth() + 1).padStart(2, '0');
-                    var day = String(date.getUTCDate()).padStart(2, '0');
-                    var hours = String(date.getUTCHours()).padStart(2, '0');
-                    var minutes = String(date.getUTCMinutes()).padStart(2, '0');
-                    
-                    // index 0번(첫 번째)이 바로 '현재 실시간'입니다.
-                    var prefix = (idx === 0) ? "🔴 현재 실시간" : "🔮 비구름 예측";
+                    var timeStr = formatKST(frame.time);
+                    var prefix = "";
 
-                    timeLabels.push(`${prefix}: ${month}월 ${day}일 ${hours}:${minutes}`);
+                    if (idx < nowIndex) {
+                        prefix = "◀ 과거 비구름";
+                    } else if (idx === nowIndex) {
+                        prefix = "🔴 현재 실시간";
+                    } else {
+                        prefix = "🔮 비구름 예측";
+                    }
+
+                    timeLabels.push(`${prefix}: ${timeStr}`);
 
                     var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/6/1_1.png', {
                         opacity: 0,
@@ -286,13 +312,12 @@
                 });
 
                 var slider = document.getElementById('radar-slider');
-                slider.max = frames.length > 0 ? frames.length - 1 : 0;
+                slider.max = frames.length > 1 ? frames.length - 1 : 0;
                 
-                // 시작 시점 = 0 (맨 왼쪽 / 현재 실시간)
-                currentIndex = 0;
-                slider.value = 0;
+                currentIndex = nowIndex;
+                slider.value = nowIndex;
 
-                showFrame(0);
+                showFrame(nowIndex);
             })
             .catch(err => {
                 document.getElementById('time-display').innerText = "레이더 데이터를 불러오지 못했습니다.";
