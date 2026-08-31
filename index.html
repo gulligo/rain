@@ -248,6 +248,7 @@
         var radarLayers = [];
         var timeLabels = [];
         var currentIndex = 0;
+        var nowIndex = 0;
         var isPlaying = false;
         var timer = null;
 
@@ -256,7 +257,10 @@
             .then(data => {
                 var past = data.radar.past || [];
                 var nowcast = data.radar.nowcast || [];
-                var frames = past.concat(nowcast);
+                
+                // 미래 예측 데이터(nowcast)만 사용하여 현재 시점부터 앞으로의 비구름 이동을 표시
+                var frames = nowcast.length > 0 ? nowcast : past;
+                nowIndex = 0; // 현재 시점을 시작점으로 고정
 
                 frames.forEach(function(frame, idx) {
                     var date = new Date(frame.time * 1000);
@@ -265,9 +269,7 @@
                     var hours = String(date.getHours()).padStart(2, '0');
                     var minutes = String(date.getMinutes()).padStart(2, '0');
                     
-                    var isFuture = idx >= past.length;
-                    var prefix = isFuture ? "🔮 비구름 예측" : "☔ 비구름 레이더";
-                    
+                    var prefix = idx === 0 ? "🔴 현재 실시간" : "🔮 비구름 예측";
                     timeLabels.push(`${prefix}: ${month}월 ${day}일 ${hours}:${minutes}`);
 
                     var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/6/1_1.png', {
@@ -283,11 +285,11 @@
                 var slider = document.getElementById('radar-slider');
                 slider.max = frames.length - 1;
                 
-                // 시작점(맨 왼쪽, 가장 과거 시간)으로 초기화
-                currentIndex = 0;
-                slider.value = 0;
+                // 앱 실행 시 '현재 시간'을 기본 위치로 설정
+                currentIndex = nowIndex;
+                slider.value = nowIndex;
 
-                showFrame(0);
+                showFrame(nowIndex);
             })
             .catch(err => {
                 document.getElementById('time-display').innerText = "레이더 데이터를 불러오지 못했습니다.";
