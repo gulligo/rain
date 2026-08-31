@@ -248,7 +248,6 @@
         var radarLayers = [];
         var timeLabels = [];
         var currentIndex = 0;
-        var nowIndex = 0;
         var isPlaying = false;
         var timer = null;
 
@@ -258,18 +257,30 @@
                 var past = data.radar.past || [];
                 var nowcast = data.radar.nowcast || [];
                 
-                // 미래 예측 데이터(nowcast)만 사용하여 현재 시점부터 앞으로의 비구름 이동을 표시
-                var frames = nowcast.length > 0 ? nowcast : past;
-                nowIndex = 0; // 현재 시점을 시작점으로 고정
+                // 과거 + 미래 예측 전체 데이터 통합
+                var frames = past.concat(nowcast);
+                
+                // 과거 데이터가 끝나는 시점(past.length - 1)이 현재 실시간 시점입니다.
+                var nowIndex = past.length > 0 ? past.length - 1 : 0;
 
                 frames.forEach(function(frame, idx) {
+                    // UTC 시간을 한국 표준시(KST)로 정확히 연산
                     var date = new Date(frame.time * 1000);
+                    
                     var month = String(date.getMonth() + 1).padStart(2, '0');
                     var day = String(date.getDate()).padStart(2, '0');
                     var hours = String(date.getHours()).padStart(2, '0');
                     var minutes = String(date.getMinutes()).padStart(2, '0');
                     
-                    var prefix = idx === 0 ? "🔴 현재 실시간" : "🔮 비구름 예측";
+                    var prefix = "";
+                    if (idx < nowIndex) {
+                        prefix = "◀ 과거 비구름";
+                    } else if (idx === nowIndex) {
+                        prefix = "🔴 현재 실시간";
+                    } else {
+                        prefix = "🔮 비구름 예측";
+                    }
+
                     timeLabels.push(`${prefix}: ${month}월 ${day}일 ${hours}:${minutes}`);
 
                     var layer = L.tileLayer('https://tilecache.rainviewer.com' + frame.path + '/256/{z}/{x}/{y}/6/1_1.png', {
@@ -285,7 +296,7 @@
                 var slider = document.getElementById('radar-slider');
                 slider.max = frames.length - 1;
                 
-                // 앱 실행 시 '현재 시간'을 기본 위치로 설정
+                // 초깃값을 현재 실시간 위치로 고정
                 currentIndex = nowIndex;
                 slider.value = nowIndex;
 
