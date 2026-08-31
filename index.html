@@ -283,11 +283,11 @@
                 var slider = document.getElementById('radar-slider');
                 slider.max = frames.length - 1;
                 
-                // 과거 데이터가 끝나는 시점(현재 시간)부터 시작하도록 설정
-                currentIndex = past.length > 0 ? past.length - 1 : 0;
-                slider.value = currentIndex;
+                // 시작점(맨 왼쪽, 가장 과거 시간)으로 초기화
+                currentIndex = 0;
+                slider.value = 0;
 
-                showFrame(currentIndex);
+                showFrame(0);
             })
             .catch(err => {
                 document.getElementById('time-display').innerText = "레이더 데이터를 불러오지 못했습니다.";
