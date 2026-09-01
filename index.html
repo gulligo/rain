@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>용용이 비구름 예측</title>
+    <title>용용이 비구름 예측 지도</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☔</text></svg>">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -146,7 +146,7 @@
 <body>
     <div id="map"></div>
 
-    <div id="time-display" class="time-header">레이더 데이터 로딩 중...</div>
+    <div id="time-display" class="time-header">비구름 데이터를 불러오는 중...</div>
 
     <div class="legend-bar">
         <div class="legend-container">
@@ -233,7 +233,7 @@
 
         locateUser(true);
 
-        // 이미지 타일에서 회색 픽셀만 자동으로 지워주는 커스텀 타일 레이어
+        // Canvas 기반 커스텀 타일 레이어: 무강수 회색 노이즈 투명화 처리
         L.TileLayer.FilterGray = L.TileLayer.extend({
             createTile: function (coords, done) {
                 var tile = document.createElement('canvas');
@@ -248,22 +248,21 @@
                     var imgData = ctx.getImageData(0, 0, 256, 256);
                     var data = imgData.data;
 
-                    // 픽셀별 탐색 후 회색(무강수 레이어) 제거
                     for (var i = 0; i < data.length; i += 4) {
                         var r = data[i];
                         var g = data[i + 1];
                         var b = data[i + 2];
 
-                        // R, G, B 값이 비슷하여 회색을 띠는 픽셀 추출
+                        // 회색 계열 무강수 배경 픽셀 투명화
                         if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && Math.abs(r - b) < 15 && r > 100 && r < 240) {
-                            data[i + 3] = 0; // 투명하게 변경
+                            data[i + 3] = 0;
                         }
                     }
                     ctx.putImageData(imgData, 0, 0);
                     done(null, tile);
                 };
                 img.onerror = function () {
-                    done(new Error('타일 로딩 실패'), tile);
+                    done(new Error('타일 로드 실패'), tile);
                 };
                 img.src = this.getTileUrl(coords);
                 return tile;
@@ -281,12 +280,15 @@
             .then(data => {
                 var frames = [];
 
+                // 과거 및 현재 실시간 관측 프레임
                 if (data.radar && data.radar.past && data.radar.past.length > 0) {
-                    var nowFrame = data.radar.past[data.radar.past.length - 1];
-                    nowFrame.isNow = true;
-                    frames.push(nowFrame);
+                    data.radar.past.forEach((f, idx) => {
+                        if (idx === data.radar.past.length - 1) f.isNow = true;
+                        frames.push(f);
+                    });
                 }
 
+                // 미래 초단기 예측 프레임 전체 수집
                 if (data.radar && data.radar.nowcast && data.radar.nowcast.length > 0) {
                     data.radar.nowcast.forEach(f => frames.push(f));
                 }
@@ -297,6 +299,7 @@
                 }
 
                 var apiHost = data.host || 'https://api.librewxr.net';
+                var nowIndex = frames.findIndex(f => f.isNow) !== -1 ? frames.findIndex(f => f.isNow) : 0;
 
                 frames.forEach(function(frame, idx) {
                     var dateObj = new Date(frame.time * 1000);
@@ -304,15 +307,18 @@
                     var mins = String(dateObj.getMinutes()).padStart(2, '0');
 
                     var labelText = "";
-                    if (frame.isNow || idx === 0) {
+                    if (frame.isNow) {
                         labelText = `🔴 현재 실시간 (${hours}:${mins})`;
+                    } else if (idx < nowIndex) {
+                        var pastDiff = (nowIndex - idx) * 10;
+                        labelText = `⏳ -${pastDiff}분 관측 (${hours}:${mins})`;
                     } else {
-                        var diffMin = idx * 10;
-                        labelText = `🔮 +${diffMin}분 예측 (${hours}:${mins})`;
+                        var futDiff = (idx - nowIndex) * 10;
+                        labelText = `🔮 +${futDiff}분 예측 (${hours}:${mins})`;
                     }
                     timeLabels.push(labelText);
 
-                    // 부드러운 이미지(1_1.png)를 불러온 뒤 회색만 필터링하여 지움
+                    // 부드러운 이미지(1_1.png)와 Canvas 필터 조합
                     var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/1_1.png';
 
                     var layer = new L.TileLayer.FilterGray(tileUrl, {
@@ -325,11 +331,12 @@
 
                 var slider = document.getElementById('radar-slider');
                 slider.max = frames.length - 1;
-                slider.value = 0;
-                showFrame(0);
+                slider.value = nowIndex;
+                currentIndex = nowIndex;
+                showFrame(nowIndex);
             })
             .catch(err => {
-                document.getElementById('time-display').innerText = "LibreWXR 데이터 로딩 실패";
+                document.getElementById('time-display').innerText = "레이더 데이터 로딩 실패";
                 console.error(err);
             });
 
@@ -343,10 +350,12 @@
                 document.getElementById('time-display').innerText = timeLabels[targetIdx];
                 
                 var speech = document.getElementById('yongSpeech');
-                if (targetIdx === 0) {
+                if (timeLabels[targetIdx].includes('현재')) {
                     speech.innerText = "현재 실시간 비구름 상태입니다!";
+                } else if (timeLabels[targetIdx].includes('예측')) {
+                    speech.innerText = "비구름 이동 예측 경로예요!";
                 } else {
-                    speech.innerText = `${targetIdx * 10}분 후 비구름 예측 경로예요!`;
+                    speech.innerText = "지난 비구름 관측 기록이에요.";
                 }
             }
         }
