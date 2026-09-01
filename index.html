@@ -129,19 +129,16 @@
         var isPlaying = false;
         var timer = null;
 
-        // 최근 30분~1시간 내 기상청 레이더 URL 생성 (5분 단위)
         function initRadarImages() {
             var now = new Date();
-            // 기상청 데이터 생성 지연시간 고려 (약 5분 전 기준)
-            now.setMinutes(now.getMinutes() - 5);
+            now.setMinutes(now.getMinutes() - 10);
 
-            var totalFrames = 12; // 최근 1시간분 (5분 * 12 = 60분)
+            var totalFrames = 10;
             var urls = [];
 
             for (var i = totalFrames - 1; i >= 0; i--) {
                 var t = new Date(now.getTime() - i * 5 * 60 * 1000);
                 
-                // 5분 단위 맞춤 (00, 05, 10, 15 ...)
                 var min = Math.floor(t.getMinutes() / 5) * 5;
                 t.setMinutes(min);
 
@@ -154,10 +151,11 @@
                 var timeCode = `${yyyy}${mm}${dd}${hh}${mi}`;
                 var displayTime = `${hh}:${mi}`;
 
-                // 기상청 오픈 이미지 경로
-                var imgUrl = `https://www.kma.go.kr/repository/image/ctk/img/RDR_CMP_WRC_${timeCode}.png`;
+                var originalUrl = `https://www.kma.go.kr/repository/image/ctk/img/RDR_CMP_WRC_${timeCode}.png`;
+                // 보안 차단 우회를 위한 프록시 적용
+                var proxyUrl = `https://corsproxy.io/?${encodeURIComponent(originalUrl)}`;
 
-                urls.push({ url: imgUrl, time: displayTime });
+                urls.push({ url: proxyUrl, time: displayTime });
             }
 
             loadImages(urls);
@@ -174,14 +172,11 @@
                 
                 img.onload = function() {
                     loadedCount++;
-                    if (loadedCount === 1) {
-                        loading.style.display = 'none';
-                    }
+                    loading.style.display = 'none';
                 };
 
-                // 이미지 로드 실패 시 무시 처리
                 img.onerror = function() {
-                    img.style.display = 'none';
+                    console.log('이미지 로드 대기 중...');
                 };
 
                 imgWrapper.appendChild(img);
