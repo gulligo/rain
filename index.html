@@ -3,107 +3,173 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>기상청 실시간 강우레이더</title>
+    <title>용용이 비구름 예측 지도</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☔</text></svg>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        html, body {
+        html, body, #map {
             width: 100%;
             height: 100%;
             margin: 0;
             padding: 0;
-            background-color: #121212;
-            color: #ffffff;
+            background-color: #aadaff;
             font-family: sans-serif;
+        }
+
+        .time-header {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            color: #ffffff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .legend-bar {
+            position: absolute;
+            top: 65px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 9px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .legend-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 4px;
+        }
+        .color-scale {
+            width: 12px;
+            height: 170px;
+            background: linear-gradient(to bottom, 
+                #ff00db 0%, 
+                #e60000 15%, 
+                #ffa500 35%, 
+                #ffff00 50%, 
+                #00cd00 65%, 
+                #0080ff 85%, 
+                #0200db 100%);
+            border: 1px solid #777;
+        }
+        .legend-labels {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            align-items: center;
-            overflow: hidden;
+            height: 170px;
+            font-size: 8px;
+            color: #333;
         }
 
-        .header-title {
-            margin-top: 15px;
-            font-size: 16px;
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 16px;
-            border-radius: 20px;
-        }
-
-        .image-container {
-            flex: 1;
-            width: 100%;
+        .location-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: #ffffff;
+            border: 1px solid #ccc;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
-            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 20px;
         }
 
-        .radar-img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            display: none;
+        .yongyong-box {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 16px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border: 2px solid #2ecc71;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
         }
-
-        .radar-img.active {
-            display: block;
-        }
+        .yongyong-avatar { font-size: 22px; }
+        .yongyong-text { font-size: 13px; font-weight: bold; color: #2c3e50; }
 
         .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
             width: 100%;
-            background: #1f1f1f;
-            padding: 15px 0 25px 0;
+            z-index: 1000;
+            background: #00897b;
+            color: white;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
         }
-
-        .slider-container {
-            width: 85%;
-            margin-bottom: 10px;
-        }
-
-        .slider {
-            width: 100%;
-            accent-color: #00897b;
-        }
-
+        .slider-container { padding: 10px 15px 0 15px; }
+        .slider { width: 100%; accent-color: #ffffff; }
         .controls-row {
             display: flex;
-            gap: 25px;
+            justify-content: space-around;
             align-items: center;
+            padding: 8px 0 12px 0;
         }
-
         .nav-btn {
-            background: rgba(255, 255, 255, 0.15);
+            background: none;
             border: none;
             color: white;
-            font-size: 20px;
-            padding: 8px 18px;
-            border-radius: 8px;
+            font-size: 22px;
             cursor: pointer;
-        }
-
-        .nav-btn:active {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        #loading {
-            position: absolute;
-            font-size: 14px;
-            color: #aaa;
+            padding: 0 15px;
         }
     </style>
 </head>
 <body>
+    <div id="map"></div>
 
-    <div class="header-title" id="time-display">기상청 레이더 불러오는 중...</div>
+    <div id="time-display" class="time-header">비구름 데이터를 불러오는 중...</div>
 
-    <div class="image-container">
-        <div id="loading">최신 이미지 수집 중...</div>
-        <div id="img-wrapper"></div>
+    <div class="legend-bar">
+        <div class="legend-container">
+            <div class="legend-labels">
+                <span>110</span>
+                <span>70</span>
+                <span>40</span>
+                <span>20</span>
+                <span>10</span>
+                <span>5</span>
+                <span>1</span>
+                <span>0.1</span>
+            </div>
+            <div class="color-scale"></div>
+        </div>
+        <div style="font-size:7px; font-weight:bold; margin-top:3px;">mm/h</div>
+    </div>
+
+    <div class="location-btn" onclick="locateUser(true)">🎯</div>
+
+    <div class="yongyong-box">
+        <div class="yongyong-avatar">🐲</div>
+        <div class="yongyong-text" id="yongSpeech">비구름 데이터를 불러오고 있어요!</div>
     </div>
 
     <div class="bottom-nav">
@@ -118,90 +184,181 @@
     </div>
 
     <script>
-        var imgWrapper = document.getElementById('img-wrapper');
-        var timeDisplay = document.getElementById('time-display');
-        var slider = document.getElementById('radar-slider');
-        var loading = document.getElementById('loading');
+        var map = L.map('map', {
+            center: [36.5, 127.5],
+            zoom: 7,
+            minZoom: 4,
+            maxZoom: 12,
+            zoomControl: false
+        });
 
-        var images = [];
-        var times = [];
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var myLocationMarker = null;
+
+        function setMarker(lat, lng) {
+            if (!myLocationMarker) {
+                myLocationMarker = L.circleMarker([lat, lng], {
+                    radius: 8,
+                    fillColor: "#0055FF",
+                    color: "#FFFFFF",
+                    weight: 3,
+                    fillOpacity: 1
+                }).addTo(map);
+            } else {
+                myLocationMarker.setLatLng([lat, lng]);
+            }
+        }
+
+        function locateUser(moveMap) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        var lat = pos.coords.latitude;
+                        var lng = pos.coords.longitude;
+                        setMarker(lat, lng);
+                        if (moveMap) map.setView([lat, lng], 9);
+                        document.getElementById('yongSpeech').innerText = "내 위치 기준 비구름 이동 예측이에요!";
+                    },
+                    function () {
+                        document.getElementById('yongSpeech').innerText = "GPS 위치를 확인해 주세요!";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
+        }
+
+        locateUser(true);
+
+        // 부자연스러운 네모 블록(노이즈) 제거 및 자연스러운 경계 필터링
+        L.TileLayer.FilterGray = L.TileLayer.extend({
+            createTile: function (coords, done) {
+                var tile = document.createElement('canvas');
+                tile.width = 256;
+                tile.height = 256;
+                var ctx = tile.getContext('2d');
+
+                var img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0);
+                    var imgData = ctx.getImageData(0, 0, 256, 256);
+                    var data = imgData.data;
+
+                    for (var i = 0; i < data.length; i += 4) {
+                        var r = data[i];
+                        var g = data[i + 1];
+                        var b = data[i + 2];
+
+                        // 1. 회색 무강수 영역 투명화
+                        if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && Math.abs(r - b) < 15 && r > 100 && r < 240) {
+                            data[i + 3] = 0;
+                        }
+                        // 2. 부자연스럽게 사각형으로 남는 지저분한 옅은 연녹색 노이즈 제거
+                        else if (g > 150 && r < 180 && b < 180 && (g - r > 30) && g < 210) {
+                            data[i + 3] = 0;
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    done(null, tile);
+                };
+                img.onerror = function () {
+                    done(new Error('타일 로드 실패'), tile);
+                };
+                img.src = this.getTileUrl(coords);
+                return tile;
+            }
+        });
+
+        var radarLayers = [];
+        var timeLabels = [];
         var currentIndex = 0;
         var isPlaying = false;
         var timer = null;
 
-        function initRadarImages() {
-            var now = new Date();
-            now.setMinutes(now.getMinutes() - 10);
+        fetch('https://api.librewxr.net/public/weather-maps.json')
+            .then(res => res.json())
+            .then(data => {
+                var frames = [];
 
-            var totalFrames = 10;
-            var urls = [];
+                if (data.radar && data.radar.past && data.radar.past.length > 0) {
+                    data.radar.past.forEach((f, idx) => {
+                        if (idx === data.radar.past.length - 1) f.isNow = true;
+                        frames.push(f);
+                    });
+                }
 
-            for (var i = totalFrames - 1; i >= 0; i--) {
-                var t = new Date(now.getTime() - i * 5 * 60 * 1000);
-                
-                var min = Math.floor(t.getMinutes() / 5) * 5;
-                t.setMinutes(min);
+                if (data.radar && data.radar.nowcast && data.radar.nowcast.length > 0) {
+                    data.radar.nowcast.forEach(f => frames.push(f));
+                }
 
-                var yyyy = t.getFullYear();
-                var mm = String(t.getMonth() + 1).padStart(2, '0');
-                var dd = String(t.getDate()).padStart(2, '0');
-                var hh = String(t.getHours()).padStart(2, '0');
-                var mi = String(t.getMinutes()).padStart(2, '0');
+                if (frames.length === 0) {
+                    document.getElementById('time-display').innerText = "데이터 없음";
+                    return;
+                }
 
-                var timeCode = `${yyyy}${mm}${dd}${hh}${mi}`;
-                var displayTime = `${hh}:${mi}`;
+                var apiHost = data.host || 'https://api.librewxr.net';
+                var nowIndex = frames.findIndex(f => f.isNow) !== -1 ? frames.findIndex(f => f.isNow) : 0;
 
-                var originalUrl = `https://www.kma.go.kr/repository/image/ctk/img/RDR_CMP_WRC_${timeCode}.png`;
-                // 보안 차단 우회를 위한 프록시 적용
-                var proxyUrl = `https://corsproxy.io/?${encodeURIComponent(originalUrl)}`;
+                frames.forEach(function(frame, idx) {
+                    var dateObj = new Date(frame.time * 1000);
+                    var hours = String(dateObj.getHours()).padStart(2, '0');
+                    var mins = String(dateObj.getMinutes()).padStart(2, '0');
 
-                urls.push({ url: proxyUrl, time: displayTime });
-            }
+                    var labelText = "";
+                    if (frame.isNow) {
+                        labelText = `🔴 현재 실시간 (${hours}:${mins})`;
+                    } else if (idx < nowIndex) {
+                        var pastDiff = (nowIndex - idx) * 10;
+                        labelText = `⏳ -${pastDiff}분 관측 (${hours}:${mins})`;
+                    } else {
+                        var futDiff = (idx - nowIndex) * 10;
+                        labelText = `🔮 +${futDiff}분 예측 (${hours}:${mins})`;
+                    }
+                    timeLabels.push(labelText);
 
-            loadImages(urls);
-        }
+                    // 0_1.png 로 변경하여 사각형 경계 제거하고 부드러운 형태로 변환
+                    var tileUrl = apiHost + frame.path + '/256/{z}/{x}/{y}/1/0_1.png';
 
-        function loadImages(urls) {
-            var loadedCount = 0;
-            imgWrapper.innerHTML = '';
+                    var layer = new L.TileLayer.FilterGray(tileUrl, {
+                        opacity: 0.85,
+                        maxZoom: 12
+                    }).addTo(map);
 
-            urls.forEach(function(item, idx) {
-                var img = document.createElement('img');
-                img.src = item.url;
-                img.className = 'radar-img';
-                
-                img.onload = function() {
-                    loadedCount++;
-                    loading.style.display = 'none';
-                };
+                    radarLayers.push(layer);
+                });
 
-                img.onerror = function() {
-                    console.log('이미지 로드 대기 중...');
-                };
-
-                imgWrapper.appendChild(img);
-                images.push(img);
-                times.push(item.time);
+                var slider = document.getElementById('radar-slider');
+                slider.max = frames.length - 1;
+                slider.value = nowIndex;
+                currentIndex = nowIndex;
+                showFrame(nowIndex);
+            })
+            .catch(err => {
+                document.getElementById('time-display').innerText = "레이더 데이터 로딩 실패";
+                console.error(err);
             });
-
-            slider.max = images.length - 1;
-            slider.value = images.length - 1;
-            currentIndex = images.length - 1;
-            showFrame(currentIndex);
-        }
 
         function showFrame(index) {
             var targetIdx = parseInt(index);
-            images.forEach(function(img, i) {
-                if (i === targetIdx) {
-                    img.classList.add('active');
-                } else {
-                    img.classList.remove('active');
-                }
+            radarLayers.forEach(function(layer, i) {
+                layer.setOpacity(i === targetIdx ? 0.85 : 0);
             });
 
-            if (times[targetIdx]) {
-                timeDisplay.innerText = `🔴 기상청 실시간 레이더 (${times[targetIdx]})`;
+            if (timeLabels[targetIdx]) {
+                document.getElementById('time-display').innerText = timeLabels[targetIdx];
+                
+                var speech = document.getElementById('yongSpeech');
+                if (timeLabels[targetIdx].includes('현재')) {
+                    speech.innerText = "현재 실시간 비구름 상태입니다!";
+                } else if (timeLabels[targetIdx].includes('예측')) {
+                    speech.innerText = "비구름 이동 예측 경로예요!";
+                } else {
+                    speech.innerText = "지난 비구름 관측 기록이에요.";
+                }
             }
         }
 
@@ -213,15 +370,15 @@
         function prevFrame() {
             if (currentIndex > 0) {
                 currentIndex--;
-                slider.value = currentIndex;
+                document.getElementById('radar-slider').value = currentIndex;
                 showFrame(currentIndex);
             }
         }
 
         function nextFrame() {
-            if (currentIndex < images.length - 1) {
+            if (currentIndex < radarLayers.length - 1) {
                 currentIndex++;
-                slider.value = currentIndex;
+                document.getElementById('radar-slider').value = currentIndex;
                 showFrame(currentIndex);
             }
         }
@@ -230,10 +387,10 @@
             isPlaying = true;
             document.getElementById('play-btn').innerText = '❚❚';
             timer = setInterval(function() {
-                currentIndex = (currentIndex + 1) % images.length;
-                slider.value = currentIndex;
+                currentIndex = (currentIndex + 1) % radarLayers.length;
+                document.getElementById('radar-slider').value = currentIndex;
                 showFrame(currentIndex);
-            }, 800);
+            }, 1000);
         }
 
         function togglePlay() {
@@ -246,8 +403,6 @@
                 startPlay();
             }
         }
-
-        initRadarImages();
     </script>
 </body>
 </html>
