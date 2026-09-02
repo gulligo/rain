@@ -5,72 +5,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>용용이비구름</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☔</text></svg>">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        html, body, #map {
-            width: 100%; height: 100%; margin: 0; padding: 0;
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #111;
             font-family: sans-serif;
+            overflow: hidden;
         }
+
+        #map-wrap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 90px;
+            overflow: auto;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            background: #222;
+        }
+
+        #img-box {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        #radar-img {
+            width: 100%;
+            display: block;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #loc-dot {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            margin-left: -8px;
+            margin-top: -8px;
+            border-radius: 50%;
+            background: #0055FF;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 4px rgba(0,0,0,0.6);
+            display: none;
+        }
+
         .time-header {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; background: rgba(0,0,0,0.65); color: #fff;
-            padding: 6px 16px; border-radius: 4px; font-size: 16px; font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.65);
+            color: #ffffff;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            pointer-events: none;
+            white-space: nowrap;
         }
-        .legend-bar {
-            position: absolute; top: 60px; left: 10px; z-index: 1000;
-            background: rgba(255,255,255,0.9); padding: 5px 6px; border-radius: 4px;
-            font-size: 8px; display: flex; flex-direction: column; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .legend-container { display: flex; flex-direction: row; align-items: center; gap: 3px; }
-        .color-scale {
-            width: 10px; height: 170px; border: 1px solid #777;
-            background: linear-gradient(to bottom,
-                #ff00ff 0%, #a100ff 8%, #ff0000 20%,
-                #ff9900 35%, #ffff00 50%, #00d600 70%,
-                #0099ff 85%, #0000ff 100%);
-        }
-        .legend-labels { display: flex; flex-direction: column; justify-content: space-between; height: 170px; font-size: 8px; color: #333; line-height: 1; }
+
         .location-btn {
-            position: absolute; top: 15px; right: 15px; z-index: 1000;
-            background: #fff; border: 1px solid #ccc; width: 38px; height: 38px; border-radius: 4px;
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 20px;
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            z-index: 1000;
+            background: #ffffff;
+            border: 1px solid #ccc;
+            width: 38px;
+            height: 38px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 20px;
         }
+
         .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; z-index: 1000;
-            background: #00897b; color: white; display: flex; flex-direction: column;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 90px;
+            box-sizing: border-box;
+            z-index: 1000;
+            background: #00897b;
+            color: white;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
         }
-        .slider-container { padding: 8px 15px 0 15px; }
-        .slider { width: 100%; accent-color: #ffffff; }
-        .controls-row { display: flex; justify-content: space-around; align-items: center; padding: 8px 0 12px 0; }
-        .nav-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 0 10px; }
+        .slider-container {
+            padding: 8px 15px 0 15px;
+        }
+        .slider {
+            width: 100%;
+            accent-color: #ffffff;
+        }
+        .controls-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0 12px 0;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 0 10px;
+        }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div id="time-display" class="time-header">로딩 중...</div>
-
-    <div class="legend-bar">
-        <div class="legend-container">
-            <div class="legend-labels">
-                <span>110</span><span>70</span><span>40</span><span>20</span>
-                <span>10</span><span>5</span><span>1</span><span>0.1</span>
-            </div>
-            <div class="color-scale"></div>
+    <div id="map-wrap">
+        <div id="img-box">
+            <img id="radar-img" src="" alt="레이더">
+            <div id="loc-dot"></div>
         </div>
-        <div style="font-size:7px; font-weight:bold; margin-top:2px;">mm/h</div>
     </div>
 
-    <div class="location-btn" onclick="locateUser(true)">🎯</div>
-
-    <div id="opacity-box" style="position:absolute; bottom:100px; left:10px; right:10px; z-index:1000; background:rgba(255,255,255,0.9); border-radius:6px; padding:6px 12px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
-        <span style="font-size:12px; white-space:nowrap;">투명도</span>
-        <input id="opacity-slider" type="range" min="0" max="100" value="65" style="flex:1;" oninput="radarOverlay.setOpacity(this.value/100)">
-    </div>
+    <div id="time-display" class="time-header">로딩 중...</div>
+    <div class="location-btn" onclick="locateUser()">🎯</div>
 
     <div class="bottom-nav">
         <div class="slider-container">
@@ -84,91 +150,114 @@
     </div>
 
     <script>
-        var map = L.map('map', { center: [36.64, 127.49], zoom: 9, zoomControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18, attribution: '© OpenStreetMap'
-        }).addTo(map);
+        // ===== 이미지 좌표 보정값 (기상청 실황 레이더 PNG, 635x620 기준) =====
+        var IMG_W = 635, IMG_H = 620;
+        var ORIGIN_X = 257, ORIGIN_Y = 296;   // (경도126, 위도38) 지점의 픽셀좌표
+        var PX_PER_DEG_LON = 52;
+        var PX_PER_DEG_LAT = 63.75;
 
-        // ===== 기상청 실황 레이더 이미지의 지리적 경계 (직접 계산한 보정값) =====
-        var RADAR_BOUNDS = [[32.9176, 121.0577], [42.6431, 133.2692]];
-        var radarOverlay = L.imageOverlay('', RADAR_BOUNDS, { opacity: 0.65 }).addTo(map);
-
-        // ===== 내 위치 =====
-        var myMarker = null, myAccuracy = null, watchId = null;
-        function setMarker(lat, lng, acc) {
-            if (!myMarker) {
-                myMarker = L.circleMarker([lat,lng], { radius: 8, fillColor:"#0055FF", color:"#FFFFFF", weight:3, opacity:1, fillOpacity:1 }).addTo(map);
-            } else {
-                myMarker.setLatLng([lat,lng]);
-            }
-            if (acc) {
-                if (!myAccuracy) {
-                    myAccuracy = L.circle([lat,lng], { radius: acc, color:"#0055FF", weight:1, fillColor:"#0055FF", fillOpacity:0.12 }).addTo(map);
-                } else {
-                    myAccuracy.setLatLng([lat,lng]); myAccuracy.setRadius(acc);
-                }
-            }
+        function lonToXPercent(lon) {
+            var x = ORIGIN_X + (lon - 126) * PX_PER_DEG_LON;
+            return (x / IMG_W) * 100;
         }
-        function locateUser(moveMap) {
+        function latToYPercent(lat) {
+            var y = ORIGIN_Y - (lat - 38) * PX_PER_DEG_LAT;
+            return (y / IMG_H) * 100;
+        }
+
+        // ===== 위치 =====
+        var watchId = null;
+        function locateUser() {
             if (!navigator.geolocation) return;
-            navigator.geolocation.getCurrentPosition(function(pos){
-                var lat=pos.coords.latitude, lng=pos.coords.longitude, acc=pos.coords.accuracy;
-                setMarker(lat,lng,acc);
-                if (moveMap) map.setView([lat,lng], 11);
-                if (watchId===null) {
-                    watchId = navigator.geolocation.watchPosition(function(p){
-                        setMarker(p.coords.latitude,p.coords.longitude,p.coords.accuracy);
-                    }, function(){}, { enableHighAccuracy:true, maximumAge:5000, timeout:10000 });
-                }
-            }, function(){}, { enableHighAccuracy:true, timeout:10000, maximumAge:0 });
+            navigator.geolocation.getCurrentPosition(updateDot, function(){}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+            if (watchId === null) {
+                watchId = navigator.geolocation.watchPosition(updateDot, function(){}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+            }
         }
-        locateUser(true);
+        function updateDot(pos) {
+            var lat = pos.coords.latitude, lon = pos.coords.longitude;
+            var dot = document.getElementById('loc-dot');
+            dot.style.left = lonToXPercent(lon) + '%';
+            dot.style.top = latToYPercent(lat) + '%';
+            dot.style.display = 'block';
+        }
+        locateUser();
 
-        // ===== 프레임(시간) 목록: 최근 2시간, 5분 간격 =====
+        // ===== 프레임(시간) 목록 만들기: 최근 2시간, 5분 간격 =====
         function pad(n){ return String(n).padStart(2,'0'); }
+
         function makeFrameList() {
             var frames = [];
-            var now = new Date(Date.now() - 10*60000); // 최신자료 지연 감안
-            now.setMinutes(now.getMinutes() - (now.getMinutes()%5), 0, 0);
-            for (var i=23;i>=0;i--) {
+            var now = new Date();
+            // 최신 데이터는 보통 5~10분 지연되므로 10분 전부터 시작
+            now = new Date(now.getTime() - 10*60000);
+            var minutes = now.getMinutes();
+            now.setMinutes(minutes - (minutes % 5), 0, 0);
+
+            for (var i = 23; i >= 0; i--) {
                 var t = new Date(now.getTime() - i*5*60000);
-                var tm = t.getFullYear()+pad(t.getMonth()+1)+pad(t.getDate())+pad(t.getHours())+pad(t.getMinutes());
+                var tm = t.getFullYear() + pad(t.getMonth()+1) + pad(t.getDate()) + pad(t.getHours()) + pad(t.getMinutes());
                 frames.push({
                     tm: tm,
-                    url: 'http://www.kma.go.kr/repositary/image/rdr/img/RDR_CMP_WRC_'+tm+'.png',
+                    url: 'http://www.kma.go.kr/repositary/image/rdr/img/RDR_CMP_WRC_' + tm + '.png',
                     label: pad(t.getMonth()+1)+'월 '+pad(t.getDate())+'일 '+pad(t.getHours())+'시 '+pad(t.getMinutes())+'분'
                 });
             }
             return frames;
         }
+
         var frames = makeFrameList();
-        var currentIndex = frames.length-1;
-        var isPlaying = false, timer = null;
+        var currentIndex = frames.length - 1;
+        var isPlaying = false;
+        var timer = null;
 
         function showFrame(index) {
             currentIndex = index;
             var f = frames[index];
-            radarOverlay.setUrl(f.url);
+            document.getElementById('radar-img').src = f.url;
             document.getElementById('time-display').innerText = f.label;
             document.getElementById('radar-slider').value = index;
         }
+
+        // 이미지가 없는 시간(아직 생성 안됨)은 이전 프레임으로 대체
+        document.getElementById('radar-img').onerror = function() {
+            if (currentIndex > 0) {
+                showFrame(currentIndex - 1);
+            }
+        };
+
         function init() {
-            document.getElementById('radar-slider').max = frames.length-1;
-            showFrame(frames.length-1);
+            var slider = document.getElementById('radar-slider');
+            slider.max = frames.length - 1;
+            showFrame(frames.length - 1);
         }
         init();
 
-        function changeFrame(val){ showFrame(parseInt(val)); }
-        function prevFrame(){ if (currentIndex>0) showFrame(currentIndex-1); }
-        function nextFrame(){ if (currentIndex<frames.length-1) showFrame(currentIndex+1); }
+        function changeFrame(val) {
+            showFrame(parseInt(val));
+        }
+        function prevFrame() {
+            if (currentIndex > 0) showFrame(currentIndex - 1);
+        }
+        function nextFrame() {
+            if (currentIndex < frames.length - 1) showFrame(currentIndex + 1);
+        }
         function startPlay() {
             isPlaying = true;
             document.getElementById('play-btn').innerText = '❚❚';
-            timer = setInterval(function(){ showFrame((currentIndex+1)%frames.length); }, 700);
+            timer = setInterval(function() {
+                var next = (currentIndex + 1) % frames.length;
+                showFrame(next);
+            }, 700);
         }
         function togglePlay() {
-            if (isPlaying) { clearInterval(timer); document.getElementById('play-btn').innerText='▶'; isPlaying=false; }
-            else startPlay();
+            if (isPlaying) {
+                clearInterval(timer);
+                document.getElementById('play-btn').innerText = '▶';
+                isPlaying = false;
+            } else {
+                startPlay();
+            }
         }
     </script>
 </body>
