@@ -16,7 +16,6 @@
             overflow: hidden;
         }
 
-        /* 스크롤 가능한 지도 창 영역 */
         #map-wrap {
             position: absolute;
             top: 0;
@@ -24,6 +23,9 @@
             right: 0;
             bottom: 90px;
             overflow: auto;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
             background: #222;
         }
 
@@ -39,21 +41,8 @@
             -webkit-user-select: none;
         }
 
-        /* 위치 점: map-wrap 바깥 화면 레이어에 고정 (지도가 확대되어도 크기 영향 없음) */
-        #loc-dot {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #0055FF;
-            display: none;
-            pointer-events: none;
-            z-index: 1500;
-            transform: translate(-50%, -50%);
-        }
-
         .zoom-controls {
-            position: fixed;
+            position: absolute;
             right: 12px;
             bottom: 105px;
             z-index: 1000;
@@ -67,11 +56,25 @@
             font-size: 20px; font-weight: bold; color: #333;
             display: flex; align-items: center; justify-content: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            cursor: pointer;
+        }
+
+        #loc-dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            margin-left: -6px;
+            margin-top: -6px;
+            border-radius: 50%;
+            background: #0055FF;
+            border: 2px solid #FFFFFF;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            display: none;
+            transform-origin: center center;
+            pointer-events: none;
         }
 
         .time-header {
-            position: fixed;
+            position: absolute;
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
@@ -88,7 +91,7 @@
         }
 
         .location-btn {
-            position: fixed;
+            position: absolute;
             top: 10px;
             right: 12px;
             z-index: 1000;
@@ -105,15 +108,14 @@
             font-size: 20px;
         }
 
-        /* 하단 컨트롤러 고정 */
         .bottom-nav {
-            position: fixed;
+            position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 90px;
             box-sizing: border-box;
-            z-index: 2000;
+            z-index: 1000;
             background: #00897b;
             color: white;
             display: flex;
@@ -144,14 +146,12 @@
     </style>
 </head>
 <body>
-    <div id="map-wrap" onscroll="renderDot()">
+    <div id="map-wrap">
         <div id="img-box">
             <img id="radar-img" src="" alt="레이더">
+            <div id="loc-dot"></div>
         </div>
     </div>
-
-    <!-- 위치 점을 스크롤/확대 영향이 없는 상위 최외곽 레이어로 이동 -->
-    <div id="loc-dot"></div>
 
     <div id="time-display" class="time-header">로딩 중...</div>
     <div class="location-btn" onclick="locateUser()">🎯</div>
@@ -174,31 +174,36 @@
     <script>
         // ===== 이미지 좌표 보정값 (기상청 실황 레이더 PNG, 635x620 기준) =====
         var IMG_W = 635, IMG_H = 620;
-        var ORIGIN_X = 257, ORIGIN_Y = 296;
+        var ORIGIN_X = 257, ORIGIN_Y = 296;   // (경도126, 위도36) 지점의 픽셀좌표
         var PX_PER_DEG_LON = 52;
         var PX_PER_DEG_LAT = 63.75;
 
         function lonToXPercent(lon) {
             var x = ORIGIN_X + (lon - 126) * PX_PER_DEG_LON;
-            return (x / IMG_W);
+            return (x / IMG_W) * 100;
         }
         function latToYPercent(lat) {
             var y = ORIGIN_Y + (36 - lat) * PX_PER_DEG_LAT;
-            return (y / IMG_H);
+            return (y / IMG_H) * 100;
         }
 
-        // ===== 확대/축소 =====
+        // ===== 확대/축소 (지도 확대 시 위치 점 크기는 고정) =====
         var zoomLevels = [100, 150, 200, 300, 400, 550];
         var zoomIndex = 0;
-        var currentPos = null;
-
+        
         function zoomStep(dir) {
-            zoomIndex = Math.min(zoomLevels.length - 1, Math.max(0, zoomIndex + dir));
+            zoomIndex = Math.min(zoomLevels.length-1, Math.max(0, zoomIndex+dir));
+            var currentScale = zoomLevels[zoomIndex] / 100;
+            
+            // 1. 지도 상자 크기 적용
             document.getElementById('img-box').style.width = zoomLevels[zoomIndex] + '%';
-            renderDot();
+            
+            // 2. 위치 점 역보정 (지도가 확대된 만큼 점의 스케일을 줄여 항상 일정한 크기 유지)
+            var dot = document.getElementById('loc-dot');
+            dot.style.transform = 'scale(' + (1 / currentScale) + ')';
         }
 
-        // ===== 위치 계산 및 화면 렌더링 =====
+        // ===== 위치 =====
         var watchId = null;
         function locateUser() {
             if (!navigator.geolocation) return;
@@ -207,48 +212,26 @@
                 watchId = navigator.geolocation.watchPosition(updateDot, function(){}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
             }
         }
-
         function updateDot(pos) {
-            currentPos = pos;
-            renderDot();
-        }
-
-        // 지도가 스크롤되거나 확대될 때 화면상 절대 위치 재계산
-        function renderDot() {
-            if (!currentPos) return;
-
-            var lat = currentPos.coords.latitude;
-            var lon = currentPos.coords.longitude;
-            var imgBox = document.getElementById('img-box');
-            var mapWrap = document.getElementById('map-wrap');
+            var lat = pos.coords.latitude, lon = pos.coords.longitude;
             var dot = document.getElementById('loc-dot');
-
-            // 이미지의 현재 실제 픽셀 너비/높이 측정
-            var boxRect = imgBox.getBoundingClientRect();
+            dot.style.left = lonToXPercent(lon) + '%';
+            dot.style.top = latToYPercent(lat) + '%';
             
-            // 점의 현재 화면 절대 위치 좌표 계산
-            var dotX = boxRect.left + (boxRect.width * lonToXPercent(lon));
-            var dotY = boxRect.top + (boxRect.height * latToYPercent(lat));
-
-            // 지도 창 내부에 들어와 있는 경우에만 표시
-            var wrapRect = mapWrap.getBoundingClientRect();
-            if (dotY >= wrapRect.top && dotY <= wrapRect.bottom && dotX >= wrapRect.left && dotX <= wrapRect.right) {
-                dot.style.left = dotX + 'px';
-                dot.style.top = dotY + 'px';
-                dot.style.display = 'block';
-            } else {
-                dot.style.display = 'none';
-            }
+            // 현재 확대 비율 반영
+            var currentScale = zoomLevels[zoomIndex] / 100;
+            dot.style.transform = 'scale(' + (1 / currentScale) + ')';
+            dot.style.display = 'block';
         }
-
         locateUser();
 
-        // ===== 프레임(시간) 목록 만들기 =====
+        // ===== 프레임(시간) 목록 만들기: 최근 2시간, 5분 간격 =====
         function pad(n){ return String(n).padStart(2,'0'); }
 
         function makeFrameList() {
             var frames = [];
             var now = new Date();
+            // 최신 데이터는 보통 5~10분 지연되므로 10분 전부터 시작
             now = new Date(now.getTime() - 10*60000);
             var minutes = now.getMinutes();
             now.setMinutes(minutes - (minutes % 5), 0, 0);
@@ -278,6 +261,7 @@
             document.getElementById('radar-slider').value = index;
         }
 
+        // 이미지가 없는 시간(아직 생성 안됨)은 이전 프레임으로 대체
         document.getElementById('radar-img').onerror = function() {
             if (currentIndex > 0) {
                 showFrame(currentIndex - 1);
