@@ -16,6 +16,7 @@
             overflow: hidden;
         }
 
+        /* 지도가 보이는 영역 (하단 90px 공간을 완벽히 비워둠) */
         #map-wrap {
             position: absolute;
             top: 0;
@@ -29,7 +30,7 @@
         #img-box {
             position: relative;
             width: 100%;
-            transform-origin: 0 0;
+            display: inline-block;
         }
 
         #radar-img {
@@ -40,7 +41,7 @@
         }
 
         .zoom-controls {
-            position: absolute;
+            position: fixed;
             right: 12px;
             bottom: 105px;
             z-index: 1000;
@@ -57,6 +58,7 @@
             cursor: pointer;
         }
 
+        /* 위치 점: 화면 확대와 상관없이 상위 픽셀 기준 정확한 10px로 유지 */
         #loc-dot {
             position: absolute;
             width: 10px;
@@ -66,10 +68,11 @@
             display: none;
             pointer-events: none;
             z-index: 10;
+            transform: translate(-50%, -50%);
         }
 
         .time-header {
-            position: absolute;
+            position: fixed;
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
@@ -86,7 +89,7 @@
         }
 
         .location-btn {
-            position: absolute;
+            position: fixed;
             top: 10px;
             right: 12px;
             z-index: 1000;
@@ -103,14 +106,15 @@
             font-size: 20px;
         }
 
+        /* 하단 제어바: 화면 맨 아래 고정(fixed) */
         .bottom-nav {
-            position: absolute;
+            position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 90px;
             box-sizing: border-box;
-            z-index: 1000;
+            z-index: 2000;
             background: #00897b;
             color: white;
             display: flex;
@@ -209,14 +213,10 @@
             currentPos = pos;
             var lat = pos.coords.latitude, lon = pos.coords.longitude;
             var dot = document.getElementById('loc-dot');
-            
-            var currentScale = zoomLevels[zoomIndex] / 100;
-            var invScale = 1 / currentScale;
 
+            // 퍼센트 위치 설정 (이미지 비율 상에 고정 정렬)
             dot.style.left = lonToXPercent(lon) + '%';
             dot.style.top = latToYPercent(lat) + '%';
-            
-            dot.style.transform = 'translate(-50%, -50%) scale(' + invScale + ')';
             dot.style.display = 'block';
         }
         locateUser();
