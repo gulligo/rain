@@ -59,6 +59,32 @@
             display: flex; align-items: center; justify-content: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
+        .forecast-btn {
+            position: absolute;
+            top: 62px;
+            right: 12px;
+            z-index: 1000;
+            background: #fff; border: 1px solid #ccc; border-radius: 4px;
+            width: 44px; padding: 4px 0;
+            font-size: 11px; text-align: center; line-height: 1.3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #forecast-panel {
+            position: absolute;
+            top: 60px;
+            right: 12px;
+            z-index: 1001;
+            background: rgba(255,255,255,0.97);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            padding: 10px 12px;
+            font-size: 13px;
+            max-width: 220px;
+            display: none;
+        }
+        #forecast-panel table { border-collapse: collapse; width: 100%; }
+        #forecast-panel td { padding: 3px 4px; text-align: center; white-space: nowrap; }
+        #forecast-panel .close-x { position:absolute; top:4px; right:8px; cursor:pointer; font-weight:bold; color:#999; }
 
         #loc-dot {
             position: absolute;
@@ -153,6 +179,8 @@
 
     <div id="time-display" class="time-header">로딩 중...</div>
     <div class="location-btn" onclick="locateUser()">🎯</div>
+    <div class="forecast-btn" onclick="loadForecast()">☔<br>예보</div>
+    <div id="forecast-panel"></div>
     <div class="zoom-controls">
         <div class="zoom-btn" onclick="zoomStep(1)">+</div>
         <div class="zoom-btn" onclick="zoomStep(-1)">−</div>
@@ -286,6 +314,88 @@
             } else {
                 startPlay();
             }
+        }
+
+        // ===== 초단기예보 (1~6시간 후) =====
+        var FORECAST_KEY = '%2BEh8kbFd9hpLu1HNrPktRwJmihJIlWkCQ0YQ3JTiiaQrPCUydm4o8AR71ASjakiseukq%2BjGF0UJufZm89REMeQ%3D%3D';
+
+        function latlonToGrid(lat, lon) {
+            var RE=6371.00877, GRID=5.0, SLAT1=30.0, SLAT2=60.0, OLON=126.0, OLAT=38.0, XO=43, YO=136;
+            var DEGRAD = Math.PI/180.0;
+            var re=RE/GRID, slat1=SLAT1*DEGRAD, slat2=SLAT2*DEGRAD, olon=OLON*DEGRAD, olat=OLAT*DEGRAD;
+            var sn = Math.tan(Math.PI*0.25+slat2*0.5)/Math.tan(Math.PI*0.25+slat1*0.5);
+            sn = Math.log(Math.cos(slat1)/Math.cos(slat2))/Math.log(sn);
+            var sf = Math.tan(Math.PI*0.25+slat1*0.5);
+            sf = Math.pow(sf,sn)*Math.cos(slat1)/sn;
+            var ro = Math.tan(Math.PI*0.25+olat*0.5);
+            ro = re*sf/Math.pow(ro,sn);
+            var ra = Math.tan(Math.PI*0.25+lat*DEGRAD*0.5);
+            ra = re*sf/Math.pow(ra,sn);
+            var theta = lon*DEGRAD-olon;
+            if (theta>Math.PI) theta-=2*Math.PI;
+            if (theta<-Math.PI) theta+=2*Math.PI;
+            theta*=sn;
+            var x = Math.floor(ra*Math.sin(theta)+XO+0.5);
+            var y = Math.floor(ro-ra*Math.cos(theta)+YO+0.5);
+            return {nx:x, ny:y};
+        }
+
+        function getBaseDateTime() {
+            var now = new Date(Date.now() - 15*60000); // 발표+제공 지연 감안
+            var mins = now.getMinutes();
+            if (mins < 30) {
+                now.setHours(now.getHours()-1);
+            }
+            now.setMinutes(30,0,0);
+            var y=now.getFullYear(), m=pad(now.getMonth()+1), d=pad(now.getDate());
+            var h=pad(now.getHours());
+            return { date: ''+y+m+d, time: h+'30' };
+        }
+
+        var SKY_MAP = {1:'맑음',3:'구름많음',4:'흐림'};
+        var PTY_MAP = {0:'',1:'비',2:'비/눈',3:'눈',4:'소나기',5:'빗방울',6:'빗방울눈날림',7:'눈날림'};
+
+        function loadForecast() {
+            var panel = document.getElementById('forecast-panel');
+            panel.style.display = 'block';
+            panel.innerHTML = '<span class="close-x" onclick="document.getElementById(\'forecast-panel\').style.display=\'none\'">✕</span>불러오는 중...';
+
+            if (!navigator.geolocation) { panel.innerHTML = '위치를 가져올 수 없습니다.'; return; }
+            navigator.geolocation.getCurrentPosition(function(pos){
+                var grid = latlonToGrid(pos.coords.latitude, pos.coords.longitude);
+                var bt = getBaseDateTime();
+                var url = 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst'
+                    + '?serviceKey=' + FORECAST_KEY
+                    + '&pageNo=1&numOfRows=100&dataType=JSON'
+                    + '&base_date=' + bt.date + '&base_time=' + bt.time
+                    + '&nx=' + grid.nx + '&ny=' + grid.ny;
+
+                fetch(url).then(function(r){ return r.json(); }).then(function(data){
+                    var items = data.response.body.items.item;
+                    var byTime = {};
+                    items.forEach(function(it){
+                        if (!byTime[it.fcstTime]) byTime[it.fcstTime] = {};
+                        byTime[it.fcstTime][it.category] = it.fcstValue;
+                    });
+                    var times = Object.keys(byTime).sort();
+                    var html = '<span class="close-x" onclick="document.getElementById(\'forecast-panel\').style.display=\'none\'">✕</span>';
+                    html += '<b>' + grid.nx + ',' + grid.ny + ' 지점 예보</b><table>';
+                    times.slice(0,6).forEach(function(t){
+                        var v = byTime[t];
+                        var hh = t.substring(0,2)+'시';
+                        var sky = SKY_MAP[v.SKY] || '';
+                        var pty = PTY_MAP[v.PTY] || '';
+                        var desc = pty || sky;
+                        var temp = v.T1H ? v.T1H+'℃' : '';
+                        var pop = v.POP ? v.POP+'%' : '';
+                        html += '<tr><td>'+hh+'</td><td>'+desc+'</td><td>'+pop+'</td><td>'+temp+'</td></tr>';
+                    });
+                    html += '</table>';
+                    panel.innerHTML = html;
+                }).catch(function(e){
+                    panel.innerHTML = '<span class="close-x" onclick="document.getElementById(\'forecast-panel\').style.display=\'none\'">✕</span>예보를 불러오지 못했습니다.';
+                });
+            }, function(){ panel.innerHTML = '위치 확인 실패'; }, { enableHighAccuracy:true, timeout:10000 });
         }
     </script>
 </body>
