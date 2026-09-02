@@ -59,15 +59,20 @@
         }
 
         #loc-dot {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            margin-left: -5px;
-            margin-top: -5px;
-            border-radius: 50%;
-            background: #0055FF;
-            display: none;
-        }
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    border-radius: 50%;
+    background: #0055FF;
+    border: 2px solid #FFFFFF;
+    box-sizing: border-box;
+    display: none;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    z-index: 100;
+    pointer-events: none;
+}
 
         .time-header {
             position: absolute;
@@ -183,14 +188,25 @@
             return (y / IMG_H) * 100;
         }
 
-        // ===== 확대/축소 (지도 크기만 커지고, 점 크기는 고정) =====
-        var zoomLevels = [100, 150, 200, 300, 400, 550];
-        var zoomIndex = 0;
-        function zoomStep(dir) {
-            zoomIndex = Math.min(zoomLevels.length-1, Math.max(0, zoomIndex+dir));
-            document.getElementById('img-box').style.width = zoomLevels[zoomIndex] + '%';
-        }
+        // ===== 확대/축소 (지도 크기만
+          var zoomLevels = [100, 150, 200, 300, 400, 550];
+var zoomIndex = 0;
 
+function zoomStep(dir) {
+    zoomIndex = Math.min(
+        zoomLevels.length - 1,
+        Math.max(0, zoomIndex + dir)
+    );
+
+    var zoom = zoomLevels[zoomIndex];
+
+    document.getElementById('img-box').style.width = zoom + '%';
+
+    var dot = document.getElementById('loc-dot');
+
+    dot.style.transform =
+        'translate(-50%, -50%) scale(' + (100 / zoom) + ')';
+}
         // ===== 위치 =====
         var watchId = null;
         function locateUser() {
