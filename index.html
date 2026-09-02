@@ -152,7 +152,7 @@
     <script>
         // ===== 이미지 좌표 보정값 (기상청 실황 레이더 PNG, 635x620 기준) =====
         var IMG_W = 635, IMG_H = 620;
-        var ORIGIN_X = 257, ORIGIN_Y = 296;   // (경도126, 위도38) 지점의 픽셀좌표
+        var ORIGIN_X = 257, ORIGIN_Y = 296;   // (경도126, 위도36) 지점의 픽셀좌표
         var PX_PER_DEG_LON = 52;
         var PX_PER_DEG_LAT = 63.75;
 
@@ -161,7 +161,7 @@
             return (x / IMG_W) * 100;
         }
         function latToYPercent(lat) {
-            var y = ORIGIN_Y - (lat - 38) * PX_PER_DEG_LAT;
+            var y = ORIGIN_Y + (36 - lat) * PX_PER_DEG_LAT;
             return (y / IMG_H) * 100;
         }
 
