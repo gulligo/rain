@@ -333,11 +333,13 @@
         }
 
         function tryEmbed(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             document.getElementById('nowcast-iframe').src = 'https://www.weather.go.kr/w/weather/radar/rain.do';
             document.getElementById('nowcast-embed').style.display = 'block';
             return false;
         }
+        // 앱을 열면 바로 1시간 예상 화면을 띄움
+        tryEmbed();
 
         // ===== 초단기예보 (1~6시간 후, 숫자 참고용) =====
         var FORECAST_KEY = '%2BEh8kbFd9hpLu1HNrPktRwJmihJIlWkCQ0YQ3JTiiaQrPCUydm4o8AR71ASjakiseukq%2BjGF0UJufZm89REMeQ%3D%3D';
