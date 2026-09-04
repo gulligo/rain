@@ -191,7 +191,11 @@
     <div id="time-display" class="time-header">로딩 중...</div>
     <div class="location-btn" onclick="locateUser()">🎯</div>
     <div class="forecast-btn" onclick="loadForecast()">☔<br>예보</div>
-    <a class="nowcast-link-btn" href="https://www.weather.go.kr/w/weather/radar/rain.do" target="_blank">🌧<br>1시간<br>예상</a>
+    <a class="nowcast-link-btn" href="https://www.weather.go.kr/w/weather/radar/rain.do" target="_blank" onclick="return tryEmbed(event)">🌧<br>1시간<br>예상</a>
+    <div id="nowcast-embed" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:3000; background:#000;">
+        <div style="position:absolute; top:8px; right:8px; z-index:3001; background:#fff; border-radius:4px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="document.getElementById('nowcast-embed').style.display='none'">✕</div>
+        <iframe id="nowcast-iframe" src="" style="width:100%; height:100%; border:0;"></iframe>
+    </div>
     <div id="forecast-panel"></div>
     <div class="zoom-controls">
         <div class="zoom-btn" onclick="zoomStep(1)">+</div>
@@ -327,6 +331,15 @@
                 startPlay();
             }
         }
+
+        function tryEmbed(e) {
+            if (e) e.preventDefault();
+            document.getElementById('nowcast-iframe').src = 'https://www.weather.go.kr/w/weather/radar/rain.do';
+            document.getElementById('nowcast-embed').style.display = 'block';
+            return false;
+        }
+        // 앱을 열면 바로 1시간 예상 화면을 띄움
+        tryEmbed();
 
         // ===== 초단기예보 (1~6시간 후, 숫자 참고용) =====
         var FORECAST_KEY = '%2BEh8kbFd9hpLu1HNrPktRwJmihJIlWkCQ0YQ3JTiiaQrPCUydm4o8AR71ASjakiseukq%2BjGF0UJufZm89REMeQ%3D%3D';
